@@ -1,0 +1,33 @@
+{
+    "global": {
+        "ip": "192.168.10.232"
+    },
+    "http": {
+        "port": 5100
+    },
+    "atem": {
+        "ip": "192.168.10.240",
+        "alvl_frequency": 4
+    },
+    "live_stream": {
+        "port": 5001
+    },
+    "recorder": {
+        "port": 4990,
+        "out_dir": "/home/user/recordings/",
+        "v_bitrate": 12000,
+        "a_bitrate": 128
+    },
+    "mplayer": {
+        "port": 4991
+    },
+    "publisher": {
+        "disc_drive": "/dev/sr0",
+        "burn_disc": 1,
+        "disc_status": 0,
+        "file_status": 0
+    },
+    "visca": {
+        "serial": "/dev/ttyUSB0"
+    }
+}
