@@ -1243,6 +1243,102 @@ function stopPublisher(){
     }, 4000);
 }
 
+//use df to get block device from path (eg if /home is on /dev/sda will return 'sda')
+function getDev(path, callback){
+    
+    var dev = '';
+    
+    var df = spawn('df',['--no-sync','-k',path],{cwd: process.cwd(), env: process.env, detached: true});
+    
+    df.stdout.on('data', function (data) {
+        var output = String(data).split("\n");
+        var results = [];
+        for (var i = 0; i < output.length; i++) {
+            if(output[i].startsWith('/dev/')){
+                dev = output[i].split(" ")[0].substr(5);
+                break;
+            }
+        }
+        if (callback != none){
+            callback(dev);
+        }
+    });
+    
+}
+
+//run lsof, callback when no files open, otherwise repeat for # attempts
+function checkFSClosed(path, attempts, timeout, callback){
+    
+    var open = false;
+    
+    var lsof = spawn('lsof',[path],{cwd: process.cwd(), env: process.env, detached: true});
+    
+    lsof.stdout.on('data', function (data) {
+        if(data.length>1){
+            open = true;
+        }
+    });
+    
+    lsof.on('close', function (code) {
+        if (open) {
+            setTimeout(function(){
+                checkFSClosed(path, atempts-1, timeout, callback);
+            }, timeout);
+        } else {
+            if (callback != none){
+                callback();
+            }
+        }
+        
+    });
+}
+
+//run sync, callback when done
+function doSync(callback){
+    
+    var sync = spawn('sync',[],{cwd: process.cwd(), env: process.env, detached: true});
+    
+    sync.on('close', function (code) {
+        if (callback != none){
+            callback();
+        }
+    });
+    
+}
+
+// Check block fs stats to see if any inflight operations
+function clearFS(dev, callback){
+    
+    var stat = spawn('cat',['/sys/block/'+dev+'/stat'],{cwd: process.cwd(), env: process.env, detached: true});
+    
+    fs.readFile('/sys/block/'+dev+'/stat', 'utf8', function(err, contents) {
+        var output = String(contents).split(" ");
+        if (output.length < 8) {
+            return;
+        } else {
+            if(output[8] == '0'){
+                callback();
+            } else {
+                setTimeout(function(){
+                    clearFS(dev, callback);
+                }, 4000);
+            }
+        }
+    });
+    
+}
+
+function syncAndClear(path, callback){
+    
+    //doSync(getFS(path,clearFS(callback)));
+    
+    //lsof
+    //sync
+    //stat
+    
+    
+    
+}
 
 /**************************************************/
 /**********             VISCA            **********/
