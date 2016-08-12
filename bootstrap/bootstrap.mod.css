@@ -135,7 +135,7 @@
   top: 15%;
   width:100%;
   height: 25%;
-  background-color: DimGrey;
+  background-color: DarkGrey;
 }
 
 .volume-bar-over-muted  {
@@ -143,5 +143,5 @@
   top: 0;
   width:100%;
   height: 15%;
-  background-color: DarkGrey;
+  background-color: DimGrey;
 }

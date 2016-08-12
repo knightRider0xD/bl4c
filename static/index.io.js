@@ -24,11 +24,11 @@ guiElements = {pages:[],
     prevBtns:[],
     auxBtns:[],
     transLengthNumeric:0,
-    aMixers:[{name:"master",channel:0,mute:1,volume:0,level:0},
-    {name:"ch1",channel:1,mute:1,volume:0,level:0},
-    {name:"ch2",channel:2,mute:1,volume:0,level:0},
-    {name:"ch3",channel:3,mute:1,volume:0,level:0},
-    {name:"ch4",channel:4,mute:1,volume:0,level:0}],
+    aMixers:[{name:"master",channel:0,mute:1,volume:0,level:[],ref:[]},
+    {name:"ch1",channel:1,mute:1,volume:0,level:[],ref:[]},
+    {name:"ch2",channel:2,mute:1,volume:0,level:[],ref:[]},
+    {name:"ch3",channel:3,mute:1,volume:0,level:[],ref:[]},
+    {name:"ch4",channel:4,mute:1,volume:0,level:[],ref:[]}],
     record:0,
     stop:0,
     publish:0,
@@ -359,17 +359,25 @@ function guiAudioChannel(mixer){
         if (atemStatus.audioChannels[chnl][0]){
             guiElements.aMixers[mixer].mute.className = guiElements.aMixers[mixer].mute.className.replace( /(?:^|\s)btn-default(?!\S)/g , ' btn-success ' ); //on
             guiElements.aMixers[mixer].mute.innerHTML = 'LIVE';
-            //level colours
-            guiElements.aMixers[mixer].level[0].className = guiElements.aMixers[mixer].level[0].className.replace( /(?:^|\s)volume-bar-normal-muted(?!\S)/g , ' volume-bar-normal ' ); //green
-            guiElements.aMixers[mixer].level[1].className = guiElements.aMixers[mixer].level[1].className.replace( /(?:^|\s)volume-bar-high-muted(?!\S)/g , ' volume-bar-high ' ); //amber
-            //guiElements.aMixers[mixer].level[2].className = guiElements.aMixers[mixer].level[2].className.replace( /(?:^|\s)volume-bar-over-muted(?!\S)/g , ' volume-bar-over ' ); //red
+            //level colours left
+            guiElements.aMixers[mixer].ref[0].className = guiElements.aMixers[mixer].ref[0].className.replace( /(?:^|\s)volume-bar-normal-muted(?!\S)/g , ' volume-bar-normal ' ); //green
+            guiElements.aMixers[mixer].ref[1].className = guiElements.aMixers[mixer].ref[1].className.replace( /(?:^|\s)volume-bar-high-muted(?!\S)/g , ' volume-bar-high ' ); //amber
+            guiElements.aMixers[mixer].ref[2].className = guiElements.aMixers[mixer].ref[2].className.replace( /(?:^|\s)volume-bar-over-muted(?!\S)/g , ' volume-bar-over ' ); //red
+            //level colours right
+            guiElements.aMixers[mixer].ref[3].className = guiElements.aMixers[mixer].ref[3].className.replace( /(?:^|\s)volume-bar-normal-muted(?!\S)/g , ' volume-bar-normal ' ); //green
+            guiElements.aMixers[mixer].ref[4].className = guiElements.aMixers[mixer].ref[4].className.replace( /(?:^|\s)volume-bar-high-muted(?!\S)/g , ' volume-bar-high ' ); //amber
+            guiElements.aMixers[mixer].ref[5].className = guiElements.aMixers[mixer].ref[5].className.replace( /(?:^|\s)volume-bar-over-muted(?!\S)/g , ' volume-bar-over ' ); //red
         } else {
             guiElements.aMixers[mixer].mute.className = guiElements.aMixers[mixer].mute.className.replace( /(?:^|\s)btn-success(?!\S)/g , ' btn-default ' ); //mute
             guiElements.aMixers[mixer].mute.innerHTML = '<span style="color: red; font-weight: bold;">MUTED</span>';
-            //level colours
-            guiElements.aMixers[mixer].level[0].className = guiElements.aMixers[mixer].level[0].className.replace( /(?:^|\s)volume-bar-normal(?!\S)/g , ' volume-bar-normal-muted ' ); //grey
-            guiElements.aMixers[mixer].level[1].className = guiElements.aMixers[mixer].level[1].className.replace( /(?:^|\s)volume-bar-high(?!\S)/g , ' volume-bar-high-muted ' ); //lighter grey
-            //guiElements.aMixers[mixer].level[2].className = guiElements.aMixers[mixer].level[2].className.replace( /(?:^|\s)volume-bar-over(?!\S)/g , ' volume-bar-over-muted ' ); //dark grey
+            //level colours left
+            guiElements.aMixers[mixer].ref[0].className = guiElements.aMixers[mixer].ref[0].className.replace( /(?:^|\s)volume-bar-normal(?!\S)/g , ' volume-bar-normal-muted ' ); //grey
+            guiElements.aMixers[mixer].ref[1].className = guiElements.aMixers[mixer].ref[1].className.replace( /(?:^|\s)volume-bar-high(?!\S)/g , ' volume-bar-high-muted ' ); //lighter grey
+            guiElements.aMixers[mixer].ref[2].className = guiElements.aMixers[mixer].ref[2].className.replace( /(?:^|\s)volume-bar-over(?!\S)/g , ' volume-bar-over-muted ' ); //dark grey
+            //level colours right
+            guiElements.aMixers[mixer].ref[3].className = guiElements.aMixers[mixer].ref[3].className.replace( /(?:^|\s)volume-bar-normal(?!\S)/g , ' volume-bar-normal-muted ' ); //grey
+            guiElements.aMixers[mixer].ref[4].className = guiElements.aMixers[mixer].ref[4].className.replace( /(?:^|\s)volume-bar-high(?!\S)/g , ' volume-bar-high-muted ' ); //lighter grey
+            guiElements.aMixers[mixer].ref[5].className = guiElements.aMixers[mixer].ref[5].className.replace( /(?:^|\s)volume-bar-over(?!\S)/g , ' volume-bar-over-muted ' ); //dark grey
         }
         
         //Set volume
@@ -618,30 +626,35 @@ function connectGui(){
     
     guiElements.aMixers[0].volume = document.getElementById("aMixerMasterVolume");
     guiElements.aMixers[0].level = document.getElementsByClassName("aMixerMasterLevel");
+    guiElements.aMixers[0].ref = document.getElementsByClassName("aMixerMasterRef");
 
     guiElements.aMixers[1].name = document.getElementById("aMixerCh1Name");
     guiElements.aMixers[1].channel = 1;
     guiElements.aMixers[1].mute = document.getElementById("aMixerCh1Mute");
     guiElements.aMixers[1].volume = document.getElementById("aMixerCh1Volume");
     guiElements.aMixers[1].level = document.getElementsByClassName("aMixerCh1Level");
+    guiElements.aMixers[1].ref = document.getElementsByClassName("aMixerCh1Ref");
 
     guiElements.aMixers[2].name = document.getElementById("aMixerCh2Name");
     guiElements.aMixers[2].channel = 2;
     guiElements.aMixers[2].mute = document.getElementById("aMixerCh2Mute");
     guiElements.aMixers[2].volume = document.getElementById("aMixerCh2Volume");
     guiElements.aMixers[2].level = document.getElementsByClassName("aMixerCh2Level");
+    guiElements.aMixers[2].ref = document.getElementsByClassName("aMixerCh2Ref");
     
     guiElements.aMixers[3].name = document.getElementById("aMixerCh3Name");
     guiElements.aMixers[3].channel = 3;
     guiElements.aMixers[3].mute = document.getElementById("aMixerCh3Mute");
     guiElements.aMixers[3].volume = document.getElementById("aMixerCh3Volume");
     guiElements.aMixers[3].level = document.getElementsByClassName("aMixerCh3Level");
+    guiElements.aMixers[3].ref = document.getElementsByClassName("aMixerCh3Ref");
     
     guiElements.aMixers[4].name = document.getElementById("aMixerCh4Name");
     guiElements.aMixers[4].channel = 4;
     guiElements.aMixers[4].mute = document.getElementById("aMixerCh4Mute");
     guiElements.aMixers[4].volume = document.getElementById("aMixerCh4Volume");
     guiElements.aMixers[4].level = document.getElementsByClassName("aMixerCh4Level");
+    guiElements.aMixers[4].ref = document.getElementsByClassName("aMixerCh4Ref");
     
     guiElements.record = document.getElementById("recordBtn");
     guiElements.stop = document.getElementById("stopBtn");
