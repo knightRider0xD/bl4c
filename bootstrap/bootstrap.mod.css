@@ -60,43 +60,70 @@
 }
 
 .volume-bar {
-  float: left;
-  width: 0;
+  position: relative;
+  display: inline-block;
+  height:300px;
+  width:15%;
+  margin-left: 1px;
+  overflow:hidden;
+  text-align:center;
+}
+
+.volume-lvl {
+  position: absolute;
+  width:100%;
   height: 100%;
-  font-size: 12px;
-  line-height: 20px;
-  color: #fff;
-  text-align: center;
-  background-color: #337ab7;
-  -webkit-box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .15);
-          box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .15);
-  /*
-  -webkit-transition: width .2s linear;
-       -o-transition: width .2s linear;
-          transition: width .2s linear;
-  */
+  top: 0;
+  background-color: #dddddd;
+  -webkit-transition: height .2s linear;
+       -o-transition: height .2s linear;
+          transition: height .2s linear;
 }
 
 .volume-bar-normal {
+  position: absolute;
+  top: 40%;
+  width:100%;
+  height: 60%;
   background-color: #5cb85c;
 }
 
 .volume-bar-high {
+  position: absolute;
+  top: 15%;
+  width:100%;
+  height: 25%;
   background-color: #f0ad4e;
 }
 
 .volume-bar-over  {
+  position: absolute;
+  top: 0;
+  width:100%;
+  height: 15%;
   background-color: #d9534f;
 }
 
 .volume-bar-normal-muted  {
+  position: absolute;
+  top: 40%;
+  width:100%;
+  height: 60%;
   background-color: Grey;
 }
 
 .volume-bar-high-muted  {
-  background-color: DimGrey;
+  position: absolute;
+  top: 15%;
+  width:100%;
+  height: 25%;
+  background-color: DarkGrey;
 }
 
 .volume-bar-over-muted  {
-  background-color: DarkGrey;
+  position: absolute;
+  top: 0;
+  width:100%;
+  height: 15%;
+  background-color: DimGrey;
 }
