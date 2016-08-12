@@ -59,7 +59,7 @@
   color: #ac2925;
 }
 
-.volume-bar {
+.volume-bar-old {
   float: left;
   width: 0;
   height: 100%;
@@ -77,26 +77,71 @@
   */
 }
 
+.volume-bar {
+  position: relative;
+  display: inline-block;
+  height:300px;
+  width:15%;
+  margin-left: 1px;
+  overflow:hidden;
+  text-align:center;
+}
+
+.volume-lvl {
+  position: absolute;
+  width:100%;
+  height: 100%;
+  top: 0;
+  background-color: #dddddd;
+  -webkit-transition: height .2s linear;
+       -o-transition: height .2s linear;
+          transition: height .2s linear;
+}
+
 .volume-bar-normal {
+  position: absolute;
+  top: 40%;
+  width:100%;
+  height: 60%;
   background-color: #5cb85c;
 }
 
 .volume-bar-high {
+  position: absolute;
+  top: 15%;
+  width:100%;
+  height: 25%;
   background-color: #f0ad4e;
 }
 
 .volume-bar-over  {
+  position: absolute;
+  top: 0;
+  width:100%;
+  height: 15%;
   background-color: #d9534f;
 }
 
 .volume-bar-normal-muted  {
+  position: absolute;
+  top: 40%;
+  width:100%;
+  height: 60%;
   background-color: Grey;
 }
 
 .volume-bar-high-muted  {
+  position: absolute;
+  top: 15%;
+  width:100%;
+  height: 25%;
   background-color: DimGrey;
 }
 
 .volume-bar-over-muted  {
+  position: absolute;
+  top: 0;
+  width:100%;
+  height: 15%;
   background-color: DarkGrey;
 }

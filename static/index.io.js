@@ -361,15 +361,15 @@ function guiAudioChannel(mixer){
             guiElements.aMixers[mixer].mute.innerHTML = 'LIVE';
             //level colours
             guiElements.aMixers[mixer].level[0].className = guiElements.aMixers[mixer].level[0].className.replace( /(?:^|\s)volume-bar-normal-muted(?!\S)/g , ' volume-bar-normal ' ); //green
-            guiElements.aMixers[mixer].level[0].className = guiElements.aMixers[mixer].level[1].className.replace( /(?:^|\s)volume-bar-high-muted(?!\S)/g , ' volume-bar-high ' ); //amber
-            guiElements.aMixers[mixer].level[0].className = guiElements.aMixers[mixer].level[2].className.replace( /(?:^|\s)volume-bar-over-muted(?!\S)/g , ' volume-bar-over ' ); //red
+            guiElements.aMixers[mixer].level[1].className = guiElements.aMixers[mixer].level[1].className.replace( /(?:^|\s)volume-bar-high-muted(?!\S)/g , ' volume-bar-high ' ); //amber
+            //guiElements.aMixers[mixer].level[2].className = guiElements.aMixers[mixer].level[2].className.replace( /(?:^|\s)volume-bar-over-muted(?!\S)/g , ' volume-bar-over ' ); //red
         } else {
             guiElements.aMixers[mixer].mute.className = guiElements.aMixers[mixer].mute.className.replace( /(?:^|\s)btn-success(?!\S)/g , ' btn-default ' ); //mute
             guiElements.aMixers[mixer].mute.innerHTML = '<span style="color: red; font-weight: bold;">MUTED</span>';
             //level colours
             guiElements.aMixers[mixer].level[0].className = guiElements.aMixers[mixer].level[0].className.replace( /(?:^|\s)volume-bar-normal(?!\S)/g , ' volume-bar-normal-muted ' ); //grey
-            guiElements.aMixers[mixer].level[0].className = guiElements.aMixers[mixer].level[1].className.replace( /(?:^|\s)volume-bar-high(?!\S)/g , ' volume-bar-high-muted ' ); //lighter grey
-            guiElements.aMixers[mixer].level[0].className = guiElements.aMixers[mixer].level[2].className.replace( /(?:^|\s)volume-bar-over(?!\S)/g , ' volume-bar-over-muted ' ); //dark grey
+            guiElements.aMixers[mixer].level[1].className = guiElements.aMixers[mixer].level[1].className.replace( /(?:^|\s)volume-bar-high(?!\S)/g , ' volume-bar-high-muted ' ); //lighter grey
+            //guiElements.aMixers[mixer].level[2].className = guiElements.aMixers[mixer].level[2].className.replace( /(?:^|\s)volume-bar-over(?!\S)/g , ' volume-bar-over-muted ' ); //dark grey
         }
         
         //Set volume
@@ -408,35 +408,11 @@ function guiAudioLevel(mixer){
         }
         
         //Set level
-        var lvl = (atemALvl.audioLevels[chnl][0]*1.1)+100;
-        if(lvl<=60){
-            guiElements.aMixers[mixer].level[0].style = "width:"+(lvl)+"%;";
-            guiElements.aMixers[mixer].level[1].style = "width:0%;";
-            guiElements.aMixers[mixer].level[2].style = "width:0%;";
-        } else if(lvl<=85){
-            guiElements.aMixers[mixer].level[0].style = "width:60%;";
-            guiElements.aMixers[mixer].level[1].style = "width:"+(lvl-60)+"%;";
-            guiElements.aMixers[mixer].level[2].style = "width:0%;";
-        } else {
-            guiElements.aMixers[mixer].level[0].style = "width:60%;";
-            guiElements.aMixers[mixer].level[1].style = "width:25%;";
-            guiElements.aMixers[mixer].level[2].style = "width:"+(lvl-85)+"%;";
-        }
+        guiElements.aMixers[mixer].level[0].style = "height:"+(atemALvl.audioLevels[chnl][0]*-1.1)+"%;";
+        guiElements.aMixers[mixer].level[1].style = "height:"+(atemALvl.audioLevels[chnl][1]*-1.1)+"%;";
     } else if (mixer==0){
-        var lvl = (atemALvl.audioLevels[0][0]*1.1)+100;
-        if(lvl<=60){
-            guiElements.aMixers[0].level[0].style = "width:"+(lvl)+"%;";
-            guiElements.aMixers[0].level[1].style = "width:0%;";
-            guiElements.aMixers[0].level[2].style = "width:0%;";
-        } else if(lvl<=85){
-            guiElements.aMixers[0].level[0].style = "width:60%;";
-            guiElements.aMixers[0].level[1].style = "width:"+(lvl-60)+"%;";
-            guiElements.aMixers[0].level[2].style = "width:0%;";
-        } else {
-            guiElements.aMixers[0].level[0].style = "width:60%;";
-            guiElements.aMixers[0].level[1].style = "width:25%;";
-            guiElements.aMixers[0].level[2].style = "width:"+(lvl-85)+"%;";
-        }
+        guiElements.aMixers[0].level[0].style = "height:"+(atemALvl.audioLevels[0][0]*-1.1)+"%;";
+        guiElements.aMixers[0].level[1].style = "height:"+(atemALvl.audioLevels[0][1]*-1.1)+"%;";
     }
     
 }
