@@ -1,6 +1,6 @@
 
 var socket = 0;
-var publisherStatus = {status:0,complete:0};
+var publisherStatus = {status:0,complete:0,lastDiscStatus:0,lastFileStatus:0};
 
 guiElements = {pages:[],
     tabs:[],
@@ -11,7 +11,9 @@ guiElements = {pages:[],
     publishDeleteBtn:0,
     publishFileList:0,
     burnerStartBtn:0,
+    burnerResumeBtn:0,
     fileStartBtn:0,
+    fileResumeBtn:0,
     uploadURI:0,
     uploadUser:0,
     uploadPwd:0,
@@ -74,14 +76,24 @@ function guiPublishProgress(){
     if(publisherStatus.status==0){
         guiElements.controlContainer.style = "";
         guiElements.progressContainer.style = "display:none;";
-        return;
+    } else {
+        guiElements.controlContainer.style = "display:none;";
+        guiElements.progressContainer.style = "";
+        
+        guiElements.currentProgress.style = "width:"+(publisherStatus.complete*100)+"%;";
+        guiElements.progressText.innerHTML = publisherStatus.status;
     }
     
-    guiElements.controlContainer.style = "display:none;";
-    guiElements.progressContainer.style = "";
-    
-    guiElements.currentProgress.style = "width:"+(publisherStatus.complete*100)+"%;";
-    guiElements.progressText.innerHTML = publisherStatus.status;
+    if(publisherStatus.lastDiscStatus==3) {
+        guiElements.burnerResumeBtn.removeAttribute("disabled");
+        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>&nbsp;COPY LAST'
+    } else if(publisherStatus.lastDiscStatus>0){
+        guiElements.burnerResumeBtn.removeAttribute("disabled");
+        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span>&nbsp;RESUME LAST'
+    } else {
+        guiElements.burnerResumeBtn.setAttribute("disabled","true");
+        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;RESUME/COPY'
+    }
     
 }
 
@@ -118,13 +130,13 @@ function deleteFromPublishList(){
     }
 }
 
-function burnDisc(){
+function burnDisc(resume){
     var fileList = [];
     for (var i=0; i<guiElements.publishFileList.options.length; i++) {
         fileList.push(guiElements.publishFileList.options[i].value);
     }
     
-    socket.emit('burnDisc', {sourceFNames:fileList});
+    socket.emit('burnDisc', {resume:resume, sourceFNames:fileList});
 }
 
 function uploadFile(){
@@ -179,7 +191,9 @@ function connectGui(){
     guiElements.publishDeleteBtn = document.getElementById("publishDeleteBtn");
     guiElements.publishFileList = document.getElementById("publishFileList");
     guiElements.burnerStartBtn = document.getElementById("burnerStartBtn");
+    guiElements.burnerResumeBtn = document.getElementById("burnerResumeBtn");
     guiElements.fileStartBtn = document.getElementById("fileStartBtn");
+    guiElements.fileResumeBtn = document.getElementById("fileResumeBtn");
     
     guiElements.uploadURI = document.getElementById("uploadURI");
     guiElements.uploadUser = document.getElementById("uploadUser");

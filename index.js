@@ -74,19 +74,18 @@ var mplayerWait = 0;
 // Publisher Vars
 var publisher = 0;
 var publisherTimer = 0;
-var publisherStatus = {status:0,complete:0};
+var publisherStatus = {status:0,complete:0,
+                       publisherStatus.lastDiscStatus:config.get('publisher:disc_status'),
+                       lastFileStatus:config.get('publisher:file_status')};
 var publisherFiles = [];
 var discDrive = config.get('publisher:disc_drive');
 var discOutput = config.get('publisher:burn_disc');
-var lastDiscStatus = config.get('publisher:disc_status');
-var lastFileStatus = config.get('publisher:file_status');
 
 // VISCA Vars
 var visca = 0;
 var viscaSerialDev = config.get('visca:serial');
 var viscaLast = 0;
 var viscaNext = 0;
-
 
 /**************************************************/
 /**********             ATEM             **********/
@@ -726,7 +725,23 @@ function publishDisc(sourceFNames, menuFName, resume){
         }
     }
     
-    initCleanDirs();
+    if (resume) {
+        switch(publisherStatus.lastDiscStatus) {
+            case 1:
+                generateTS();
+                break;
+            case 2:
+                prepOutput();
+                break;
+            case 3:
+                prepOutput();
+                break;
+            default:
+                initCleanDirs();
+        }
+    } else {
+        initCleanDirs();
+    }
     
     
     // Clean Working Directories
@@ -882,6 +897,9 @@ function publishDisc(sourceFNames, menuFName, resume){
 		console.log(err);
                 return;
             }
+            publisherStatus.lastDiscStatus = 1;
+            config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
+            config.save();
             generateTS();
         });
         
@@ -920,7 +938,10 @@ function publishDisc(sourceFNames, menuFName, resume){
                 return;
             }
             publisherStatus.complete = 0.45;
+            publisherStatus.lastDiscStatus = 2;
+            config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
             io.emit('publisherUpdate', publisherStatus);
+            config.save();
             prepOutput();
         });
     }
@@ -960,13 +981,13 @@ function publishDisc(sourceFNames, menuFName, resume){
                 return;
             }
             if(isoinfoOutput.indexOf("Seek error")<0){
-                console.log('No blank disc found, please insert one & start again.');
-                publisherStatus.status = "No blank disc found, please insert one & start again";
+                console.log('No blank disc found, please insert one & press resume.');
+                publisherStatus.status = "No blank disc found, please insert one & press resume";
                 publisherStatus.complete = 0.49;
                 io.emit('publisherUpdate', publisherStatus);
-                publisherTimer = setTimeout(function(){
+                /*publisherTimer = setTimeout(function(){
                     prepOutput();
-                }, 4000);
+                }, 4000);*/
             } else {
                 writeOutput();
             }
@@ -1014,6 +1035,9 @@ function publishDisc(sourceFNames, menuFName, resume){
             console.log('Complete');
             publisherStatus.status = "Complete";
             publisherStatus.complete = 1;
+            publisherStatus.lastDiscStatus = 3;
+            config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
+            config.save();
             io.emit('publisherUpdate', publisherStatus);
             setTimeout(function(){
                 publisherStatus.status = 0;

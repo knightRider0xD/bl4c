@@ -38,8 +38,8 @@
             <div class="row">
                 <ul class="nav nav-pills nav-pills-info nav-justified nav-lg">
                     <li role="presentation" class="indexTab active"><a href="#" onclick="guiPageSwitcher(0);return false;">Burn DVD</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiPageSwitcher(1);return false;">FTP Upload</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiPageSwitcher(2);return false;">File Copy</a></li>
+                    <li role="presentation" class="indexTab"><a href="#" onclick="guiPageSwitcher(1);return false;">File Copy</a></li>
+                    <li role="presentation" class="indexTab"><a href="#" onclick="guiPageSwitcher(2);return false;">FTP Upload</a></li>
                 </ul>
             </div>
         
@@ -63,8 +63,49 @@
 
             <div class="indexPage row">
                 <div>
-                    <div class="col-md-6 col-sm-6">
-                        <button type="button" id="burnerStartBtn" class="col-md-6 col-sm-6 btn btn-lg btn-success" onclick="burnDisc()" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;"><span class="glyphicon glyphicon-cd" aria-hidden="true"></span>&nbsp;BURN DISC</button>
+                    <div class="col-md-4 col-sm-4">
+                        
+                    </div>
+                    <div class="col-md-4 col-sm-4">
+                        <button type="button" id="burnerResumeBtn" class="btn btn-lg btn-default" onclick="burnDisc(1)" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;" disabled><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;RESUME/COPY</button>
+                    </div>
+                    <div class="col-md-4 col-sm-4">
+                        <button type="button" id="burnerStartBtn" class="btn btn-lg btn-success" onclick="burnDisc(0)" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;"><span class="glyphicon glyphicon-cd" aria-hidden="true"></span>&nbsp;BURN DISC</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="indexPage row" style="visibility:hidden;">
+                <div>
+                    <div class="col-md-3 col-sm-3">
+                        <p>Select Output Device</p>
+                    </div>
+                    <div class="col-md-9 col-sm-9">
+                        <select id="sourceFileList" class="form-control" style="width:100%">
+                    
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="col-md-3 col-sm-3">
+                        <p>Output Filename</p>
+                    </div>
+                    <div class="col-md-9 col-sm-9">
+                        <div class="input-group">
+                            <input type="text" id="uploadOutName" class="form-control" placeholder="filename" aria-describedby="basic-addon2">
+                            <span class="input-group-addon" id="basic-addon2">.mp4</span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="col-md-4 col-sm-4">
+                        
+                    </div>
+                    <div class="col-md-4 col-sm-4">
+                        <button type="button" id="fileResumeBtn" class="btn btn-lg btn-default" onclick="burnDisc(1)" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;" disabled><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;REPEAT LAST</button>
+                    </div>
+                    <div class="col-md-4 col-sm-4">
+                        <button type="button" id="fileStartBtn" class="btn btn-lg btn-success" onclick="" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;" disabled="True"><span class="glyphicon glyphicon-hdd" aria-hidden="true"></span>&nbsp;COPY TO DRIVE</button>
                     </div>
                 </div>
             </div>
@@ -113,13 +154,6 @@
                 </div>
             </div>
             
-            <div class="indexPage row" style="visibility:hidden;">
-                <div>
-                    <div class="col-md-6 col-sm-6">
-                        <button type="button" id="fileStartBtn" class="btn btn-lg btn-success" onclick="" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;" disabled="True"><span class="glyphicon glyphicon-hdd" aria-hidden="true"></span>&nbsp;COPY TO DRIVE (TODO)</button>
-                    </div>
-                </div>
-            </div>
             
         </div>
     
