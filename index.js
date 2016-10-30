@@ -1293,6 +1293,10 @@ function getDev(path, callback){
 //run lsof, callback when no files open, otherwise repeat for # attempts
 function checkFSClosed(path, attempts, timeout, callback){
     
+    if (attempts <= 0){
+        callback(false);
+    }
+    
     var open = false;
     
     var lsof = spawn('lsof',[path],{cwd: process.cwd(), env: process.env, detached: true});
@@ -1310,7 +1314,7 @@ function checkFSClosed(path, attempts, timeout, callback){
             }, timeout);
         } else {
             if (callback != none){
-                callback();
+                callback(true);
             }
         }
         
@@ -1331,7 +1335,11 @@ function doSync(callback){
 }
 
 // Check block fs stats to see if any inflight operations
-function clearFS(dev, callback){
+function checkFSClear(dev, attempts, timeout, callback){
+    
+    if (attempts <= 0){
+        callback(false);
+    }
     
     var stat = spawn('cat',['/sys/block/'+dev+'/stat'],{cwd: process.cwd(), env: process.env, detached: true});
     
@@ -1341,26 +1349,43 @@ function clearFS(dev, callback){
             return;
         } else {
             if(output[8] == '0'){
-                callback();
+                callback(true);
             } else {
                 setTimeout(function(){
-                    clearFS(dev, callback);
-                }, 4000);
+                    clearFS(dev, attempts-1, timeout, callback);
+                }, timeout);
             }
         }
     });
     
 }
 
+// run checkFSClosed, doSync, getDev & checkFSClear to determine if safe to remove disk
+// callback with true if OK to remove, false if a timeout occurs.
 function syncAndClear(path, callback){
     
-    //doSync(getFS(path,clearFS(callback)));
+    var cb_chkFsCls = function (success) {
+        if (!success) {
+            callback(false);
+            return;
+        }
+        doSync(cb_sync);
+    };
     
-    //lsof
-    //sync
-    //stat
+    var cb_sync = function () {
+        getDev(path, cb_gDev);
+    };
     
+    var cb_gDev = function (dev) {
+        checkFSClear(dev, 5, 4000, cb_chkFsClr);
+    };
     
+    var cb_chkFsClr = function (success) {
+        callback(success);
+        return;
+    };
+    
+    checkFSClosed(path, 5, 4000, cb_chkFsCls);
     
 }
 
