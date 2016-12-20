@@ -139,7 +139,8 @@ function cleanDirs(root, names, callback){
         }
         publisherStatus.complete = 0.02;
         io.emit('publisherUpdate', publisherStatus);
-        setupDirs();
+        //setupDirs();
+        callback();
     });
     
 }
@@ -177,7 +178,8 @@ function setupDirs(root, names, callback){
         }
         publisherStatus.complete = 0.05;
         io.emit('publisherUpdate', publisherStatus);
-        transcodeVideos(0);
+        //transcodeVideos(0);
+        callback();
     });
 }
 
