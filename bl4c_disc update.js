@@ -340,7 +340,7 @@ function prepOutput(callback){
     }
     
     var isoinfoOutput = "";
-    publisher = spawn('isoinfo', ['-d', '-i', '/dev/sr0'],{cwd: process.cwd(), env: process.env, detached: true});
+    publisher = spawn('isoinfo', ['-d', '-i', discDrive],{cwd: process.cwd(), env: process.env, detached: true});
     
     console.log('Waiting for disc');
     publisherStatus.status = "Waiting for disc";
@@ -381,7 +381,7 @@ function writeOutput(callback){
     if(exiting){return;}
     
     if(discOutput){
-        publisher = spawn('growisofs', ['-v','-Z','/dev/sr0','-use-the-force-luke=noload','-V','DVD','-dvd-video','disc_fs/'],{cwd: process.cwd()+'/publishing', env: process.env, detached: true});
+        publisher = spawn('growisofs', ['-v','-Z',discDrive,'-use-the-force-luke=noload','-V','DVD','-dvd-video','disc_fs/'],{cwd: process.cwd()+'/publishing', env: process.env, detached: true});
     } else {
         publisher = spawn('mkisofs', ['-v','-V','DVD','-dvd-video','-o','dvd.iso','disc_fs/'],{cwd: process.cwd()+'/publishing', env: process.env, detached: true});
     }
