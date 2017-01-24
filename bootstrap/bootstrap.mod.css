@@ -12,6 +12,14 @@
   border-color: #aaa;
 }
 
+.btn-tall,
+.btn-group-tall {
+  padding: 18px 20px;
+  font-size: 14px;
+  border-radius: 0px;
+  border-color: #aaa;
+}
+
 .nav-pills-info > li.active > a,
 .nav-pills-info > li.active > a:hover,
 .nav-pills-info > li.active > a:focus {
@@ -62,8 +70,8 @@
 .volume-bar {
   position: relative;
   display: inline-block;
-  height:300px;
-  width:15%;
+  height:276px;
+  width:45%;
   margin-left: 1px;
   overflow:hidden;
   text-align:center;

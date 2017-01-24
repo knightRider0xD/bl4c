@@ -108,20 +108,25 @@
             
             <div class="row indexPage" style="display:none;">
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <button id="aMixerCh1Mute" type="button" class="btn btn-default" onclick="setAtemAudioMute(1)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
-                    <br>
-                    <div style="display: inline-block; height:300px; width:60%; overflow:hidden; text-align:center;"><input id="aMixerCh1Volume" type="range" min="-60" max="6" oninput="setAtemAudioVolume(1)" style="transform: rotate(-90deg); position: relative; top: 0; left: -100px; height: 100%; width: 300px;"></input></div>
-                    <div class="volume-bar">
-                        <div class="aMixerCh1Ref   volume-bar-normal"></div>
-                        <div class="aMixerCh1Ref   volume-bar-high"></div>
-                        <div class="aMixerCh1Ref   volume-bar-over"></div>
-                        <div class="aMixerCh1Level volume-lvl"></div>
+                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
+                        <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
+                        <div id="aMixerCh1Volume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
+                        <div id="aMixerCh1VolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
                     </div>
-                    <div class="volume-bar">
-                        <div class="aMixerCh1Ref   volume-bar-normal"></div>
-                        <div class="aMixerCh1Ref   volume-bar-high"></div>
-                        <div class="aMixerCh1Ref   volume-bar-over"></div>
-                        <div class="aMixerCh1Level volume-lvl"></div>
+                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
+                        <button id="aMixerCh1Mute" type="button" class="btn btn-tall btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
+                        <div class="volume-bar">
+                            <div class="aMixerCh1Ref   volume-bar-normal"></div>
+                            <div class="aMixerCh1Ref   volume-bar-high"></div>
+                            <div class="aMixerCh1Ref   volume-bar-over"></div>
+                            <div class="aMixerCh1Level volume-lvl"></div>
+                        </div>
+                        <div class="volume-bar">
+                            <div class="aMixerCh1Ref   volume-bar-normal"></div>
+                            <div class="aMixerCh1Ref   volume-bar-high"></div>
+                            <div class="aMixerCh1Ref   volume-bar-over"></div>
+                            <div class="aMixerCh1Level volume-lvl"></div>
+                        </div>
                     </div>
                     <br>
                     <select id="aMixerCh1Name" class="form-control" style="width:100%; padding-left:4px; padding-right:4px;" onchange="guiAudioChannel(1)">
@@ -138,20 +143,25 @@
                     </select>
                 </div>
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <button id="aMixerCh2Mute" type="button" class="btn btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
-                    <br>
-                    <div style="display: inline-block; height:300px; width:60%; overflow:hidden; text-align:center;"><input id="aMixerCh2Volume" type="range" min="-60" max="6" oninput="setAtemAudioVolume(2)" style="transform: rotate(-90deg); position: relative; top: 0; left: -100px; height: 100%; width: 300px;"></input></div>
-                    <div class="volume-bar">
-                        <div class="aMixerCh2Ref   volume-bar-normal"></div>
-                        <div class="aMixerCh2Ref   volume-bar-high"></div>
-                        <div class="aMixerCh2Ref   volume-bar-over"></div>
-                        <div class="aMixerCh2Level volume-lvl"></div>
+                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
+                        <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
+                        <div id="aMixerCh2Volume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
+                        <div id="aMixerCh2VolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
                     </div>
-                    <div class="volume-bar">
-                        <div class="aMixerCh2Ref   volume-bar-normal"></div>
-                        <div class="aMixerCh2Ref   volume-bar-high"></div>
-                        <div class="aMixerCh2Ref   volume-bar-over"></div>
-                        <div class="aMixerCh2Level volume-lvl"></div>
+                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
+                    <button id="aMixerCh2Mute" type="button" class="btn btn-tall btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
+                        <div class="volume-bar">
+                            <div class="aMixerCh2Ref   volume-bar-normal"></div>
+                            <div class="aMixerCh2Ref   volume-bar-high"></div>
+                            <div class="aMixerCh2Ref   volume-bar-over"></div>
+                            <div class="aMixerCh2Level volume-lvl"></div>
+                        </div>
+                        <div class="volume-bar">
+                            <div class="aMixerCh2Ref   volume-bar-normal"></div>
+                            <div class="aMixerCh2Ref   volume-bar-high"></div>
+                            <div class="aMixerCh2Ref   volume-bar-over"></div>
+                            <div class="aMixerCh2Level volume-lvl"></div>
+                        </div>
                     </div>
                     <br>
                     <select id="aMixerCh2Name" class="form-control" style="width:100%; padding-left:4px; padding-right:4px;" onchange="guiAudioChannel(2)">
@@ -168,20 +178,25 @@
                     </select>
                 </div>
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <button id="aMixerCh3Mute" type="button" class="btn btn-default" onclick="setAtemAudioMute(3)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
-                    <br>
-                    <div style="display: inline-block; height:300px; width:60%; overflow:hidden; text-align:center;"><input id="aMixerCh3Volume" type="range" min="-60" max="6" oninput="setAtemAudioVolume(3)" style="transform: rotate(-90deg); position: relative; top: 0; left: -100px; height: 100%; width: 300px;"></input></div>
-                    <div class="volume-bar">
-                        <div class="aMixerCh3Ref   volume-bar-normal"></div>
-                        <div class="aMixerCh3Ref   volume-bar-high"></div>
-                        <div class="aMixerCh3Ref   volume-bar-over"></div>
-                        <div class="aMixerCh3Level volume-lvl"></div>
+                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
+                        <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
+                        <div id="aMixerCh3Volume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
+                        <div id="aMixerCh3VolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
                     </div>
-                    <div class="volume-bar">
-                        <div class="aMixerCh3Ref   volume-bar-normal"></div>
-                        <div class="aMixerCh3Ref   volume-bar-high"></div>
-                        <div class="aMixerCh3Ref   volume-bar-over"></div>
-                        <div class="aMixerCh3Level volume-lvl"></div>
+                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
+                        <button id="aMixerCh3Mute" type="button" class="btn btn-tall btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
+                        <div class="volume-bar">
+                            <div class="aMixerCh3Ref   volume-bar-normal"></div>
+                            <div class="aMixerCh3Ref   volume-bar-high"></div>
+                            <div class="aMixerCh3Ref   volume-bar-over"></div>
+                            <div class="aMixerCh3Level volume-lvl"></div>
+                        </div>
+                        <div class="volume-bar">
+                            <div class="aMixerCh3Ref   volume-bar-normal"></div>
+                            <div class="aMixerCh3Ref   volume-bar-high"></div>
+                            <div class="aMixerCh3Ref   volume-bar-over"></div>
+                            <div class="aMixerCh3Level volume-lvl"></div>
+                        </div>
                     </div>
                     <br>
                     <select id="aMixerCh3Name" class="form-control" style="width:100%; padding-left:4px; padding-right:4px;" onchange="guiAudioChannel(3)">
@@ -198,20 +213,25 @@
                     </select>
                 </div>
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <button id="aMixerCh4Mute" type="button" class="btn btn-default" onclick="setAtemAudioMute(4)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
-                    <br>
-                    <div style="display: inline-block; height:300px; width:60%; overflow:hidden; text-align:center;"><input id="aMixerCh4Volume" type="range" min="-60" max="6" oninput="setAtemAudioVolume(4)" style="transform: rotate(-90deg); position: relative; top: 0; left: -100px; height: 100%; width: 300px;"></input></div>
-                    <div class="volume-bar">
-                        <div class="aMixerCh4Ref   volume-bar-normal"></div>
-                        <div class="aMixerCh4Ref   volume-bar-high"></div>
-                        <div class="aMixerCh4Ref   volume-bar-over"></div>
-                        <div class="aMixerCh4Level volume-lvl"></div>
+                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
+                        <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
+                        <div id="aMixerCh4Volume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
+                        <div id="aMixerCh4VolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
                     </div>
-                    <div class="volume-bar">
-                        <div class="aMixerCh4Ref   volume-bar-normal"></div>
-                        <div class="aMixerCh4Ref   volume-bar-high"></div>
-                        <div class="aMixerCh4Ref   volume-bar-over"></div>
-                        <div class="aMixerCh4Level volume-lvl"></div>
+                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
+                        <button id="aMixerCh4Mute" type="button" class="btn btn-tall btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
+                        <div class="volume-bar">
+                            <div class="aMixerCh4Ref   volume-bar-normal"></div>
+                            <div class="aMixerCh4Ref   volume-bar-high"></div>
+                            <div class="aMixerCh4Ref   volume-bar-over"></div>
+                            <div class="aMixerCh4Level volume-lvl"></div>
+                        </div>
+                        <div class="volume-bar">
+                            <div class="aMixerCh4Ref   volume-bar-normal"></div>
+                            <div class="aMixerCh4Ref   volume-bar-high"></div>
+                            <div class="aMixerCh4Ref   volume-bar-over"></div>
+                            <div class="aMixerCh4Level volume-lvl"></div>
+                        </div>
                     </div>
                     <br>
                     <select id="aMixerCh4Name" class="form-control" style="width:100%; padding-left:4px; padding-right:4px;" onchange="guiAudioChannel(4)">
@@ -228,20 +248,25 @@
                     </select>
                 </div>
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <br>
-                    <br>
-                    <div style="display: inline-block; height:300px; width:60%; overflow:hidden; text-align:center;"><input id="aMixerMasterVolume" type="range" min="-60" max="6" oninput="setAtemAudioVolume(0)" style="transform: rotate(-90deg); position: relative; top: 0; left: -100px; height: 100%; width: 300px;"></input></div>
-                    <div class="volume-bar">
-                        <div class="aMixerMasterRef   volume-bar-normal"></div>
-                        <div class="aMixerMasterRef   volume-bar-high"></div>
-                        <div class="aMixerMasterRef   volume-bar-over"></div>
-                        <div class="aMixerMasterLevel volume-lvl"></div>
+                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
+                        <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
+                        <div id="aMixerMasterVolume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
+                        <div id="aMixerMasterVolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
                     </div>
-                    <div class="volume-bar">
-                        <div class="aMixerMasterRef   volume-bar-normal"></div>
-                        <div class="aMixerMasterRef   volume-bar-high"></div>
-                        <div class="aMixerMasterRef   volume-bar-over"></div>
-                        <div class="aMixerMasterLevel volume-lvl"></div>
+                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
+                        <div style="width:1px; height:56px;"></div>
+                        <div class="volume-bar">
+                            <div class="aMixerMasterRef   volume-bar-normal"></div>
+                            <div class="aMixerMasterRef   volume-bar-high"></div>
+                            <div class="aMixerMasterRef   volume-bar-over"></div>
+                            <div class="aMixerMasterLevel volume-lvl"></div>
+                        </div>
+                        <div class="volume-bar">
+                            <div class="aMixerMasterRef   volume-bar-normal"></div>
+                            <div class="aMixerMasterRef   volume-bar-high"></div>
+                            <div class="aMixerMasterRef   volume-bar-over"></div>
+                            <div class="aMixerMasterLevel volume-lvl"></div>
+                        </div>
                     </div>
                     <br>
                     <div style="text-align:center; font-size:1.2em; margin: 5px 0 0 0;">MASTER</div>

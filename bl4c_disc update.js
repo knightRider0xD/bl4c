@@ -1,110 +1,7 @@
-function publishDisc(sourceFNames, menuFName, resume){
-    
-    if(exiting){return;}
-    
-    if(publisher){
-        io.emit('publisherUpdate', publisherStatus);
-        console.log('Already publishing...');
-        return;
-    }
-    
-    if(recorderStatus.recording){
-        io.emit('recorderUpdate', recorderStatus);
-        console.log('Recording; cannot publish.');
-        return;
-    }
-    
-    if (!resume) {
-        publisherStatus.lastDiscStatus = 0;
-        config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
-        config.save();
-    }
-    
-    /*
-    var cb_clean = function (success) {
-        if (!success) {
-            return;
-        }
-        doSync(cb_sync);
-    };
-    
-    var cb_sync = function () {
-        getDev(path, cb_gDev);
-    };
-    
-    var cb_gDev = function (dev) {
-        checkFSClear(dev, 5, 4000, cb_chkFsClr);
-    };
-    
-    var cb_chkFsClr = function (success) {
-        callback(success);
-        return;
-    };
-    */
-    
-    switch(publisherStatus.lastDiscStatus) {
-        case 1:
-            generateTS();
-            break;
-        case 2:
-            prepOutput();
-            break;
-        case 3:
-            prepOutput();
-            break;
-        default:
-            reloadRecordings();
-            // validate input file names
-            for (var i = 0; i < sourceFNames.length; i++) {
-                if(publisherFiles.indexOf(sourceFNames[i])<0){
-                    return;
-                }
-            }
-            initCleanDirs();
-    }
-    
-
-}
+var currentTcIndex = 0;
+var transcodedFiles = [];
 
 
-function publishFTP(sourceFNames, destFName, server, username, password, resume){
-    
-    if(exiting){return;}
-    
-    if(publisher){
-        io.emit('publisherUpdate', publisherStatus);
-        console.log('Already publishing...');
-        return;
-    }
-    
-    if(recorderStatus.recording){
-        io.emit('recorderUpdate', recorderStatus);
-        console.log('Recording; cannot publish.');
-        return;
-    }
-    
-    if (!resume) {
-        publisherStatus.lastFileStatus = 0;
-        config.set('publisher:file_status', publisherStatus.lastFileStatus);
-        config.save();
-    }
-    
-    switch(publisherStatus.lastFileStatus) {
-        case 1:
-            uploadFile(callback);
-            break;
-        default:
-            reloadRecordings();
-            // validate input file names
-            for (var i = 0; i < sourceFNames.length; i++) {
-                if(publisherFiles.indexOf(sourceFNames[i])<0){
-                    return;
-                }
-            }
-            initCleanDirs();
-    }
-    
-}
     
 
 // Clean Working Directories
@@ -183,23 +80,53 @@ function setupDirs(root, names, callback){
     });
 }
 
-var transcodedFiles = [];
-
 // Transcode Videos
-function transcodeVideos(currentIndex){
+function transcodeVideo(srcFiles, vc, vb, ac, ab, destFile, callback){
     
     if(exiting){return;}
-    
-    if(currentIndex>=sourceFNames.length){
-        generateXML();
+
+    var inputArgs = [];
+    if(srcFiles.length<1){
+        publisherStatus.status = "Too few files. Cancelling";
+        publisherStatus.complete = 1;
+        io.emit('publisherUpdate', publisherStatus);
+        setTimeout(function(){
+                publisherStatus.status = 0;
+                publisherStatus.complete = 0;
+                io.emit('publisherUpdate', publisherStatus);
+        }, 4000);
         return;
+    } else if(srcFiles.length==1){
+        inputArgs = ['-i', srcFiles[0]];
+    } else {
+        for (var i = 0; i < srcFiles.length; i++) {
+            inputArgs.push('-i');
+            inputArgs.push(srcFiles[i]);
+        }
+        inputArgs.push('-filter_complex');
+        var concats = '';
+        for (var i = 0; i < srcFiles.length; i++) {
+            concats = concats + '[i:0] [i:1] ';
+        }
+        concats = concats + 'concat=n='+str(i)+':v=1:a=1 [v] [a]';
+        inputArgs.push(concats);
+        inputArgs.push('-map');
+        inputArgs.push("'[v]'");
+        inputArgs.push('-map');
+        inputArgs.push("'[a]'");
     }
     
-    publisher = spawn('ffmpeg', ['-i', recordDir+sourceFNames[currentIndex], '-target', 'pal-dvd', '-aspect','16:9','publishing/working/vid'+currentIndex+'.mpg'],{cwd: process.cwd(), env: process.env, detached: true});
-    //transcodeVideos(currentIndex+1);
-
-    console.log('Transcoding '+sourceFNames[currentIndex]);
-    publisherStatus.status = "Transcoding "+sourceFNames[currentIndex];
+    var args = [];
+    if(vc.endsWith('dvd')){
+        args = inputArgs.concat(['-target', vc, '-aspect', '16:9', destFile]);
+    } else {
+        args = inputArgs.concat(['-c:v', vc, '-b:v', vb, '-c:a', ac, '-b:a', ab, destFile]);
+    }
+    
+    publisher = spawn('ffmpeg', args, {cwd: process.cwd(), env: process.env, detached: true});
+    
+    console.log('Transcoding '+srcFiles[0]);
+    publisherStatus.status = "Transcoding "+srcFiles[0];
     publisherStatus.complete = publisherStatus.complete + 0.05;
     io.emit('publisherUpdate', publisherStatus);
     var duration = '00:00:00';
@@ -214,7 +141,7 @@ function transcodeVideos(currentIndex){
         for (var i = 0; i < output.length; i++) {
             var tIndex = output[i].indexOf('time=');
             if(tIndex>=0){
-                publisherStatus.status = "Transcoding "+sourceFNames[currentIndex]+": "+output[i].substring(tIndex+5,tIndex+13)+"/"+duration;
+                publisherStatus.status = "Transcoding "srcFiles[0]": "+output[i].substring(tIndex+5,tIndex+13)+"/"+duration;
                 continue;
             }
             tIndex = output[i].indexOf('Duration: ');
@@ -231,14 +158,13 @@ function transcodeVideos(currentIndex){
         if(exiting){
             return;
         }
-        transcodedFiles.push('vid'+currentIndex+'.mpg');
         io.emit('publisherUpdate', publisherStatus);
-        transcodeVideos(currentIndex+1);
+        callback();
     });
 }
 
 // Generate DVDAuthor XML
-function generateXML(callback){
+function generateXML(files, menuFile, callback){
     
     if(exiting){return;}
     
@@ -251,10 +177,10 @@ function generateXML(callback){
                     '    <vmgm>\n'+
                     '        <menus>\n'+
                     '            <video format="PAL" aspect="16:9"></video>\n'
-    if(menuFName){
+    if(menuFile){
         dvd_xml += '            <pgc entry="title">\n'+
                     '                <button>jump title 1;</button>\n'+
-                    '                <vob file="../menus/'+menuFName+'"></vob>\n'+
+                    '                <vob file="../menus/'+menuFile+'"></vob>\n'+
                     '            </pgc>\n'
     }
     dvd_xml +=     '        </menus>\n'+
@@ -263,8 +189,8 @@ function generateXML(callback){
                     '        <titles>\n'+
                     '            <pgc>\n';
 
-    for (var i = 0; i < transcodedFiles.length; i++) {
-        dvd_xml += '                <vob file="'+transcodedFiles[i]+'"></vob>\n';
+    for (var i = 0; i < files.length; i++) {
+        dvd_xml += '                <vob file="'+files[i]+'"></vob>\n';
     }
     
     dvd_xml +=     '                <post>call vmgm menu;</post>\n'+
@@ -278,10 +204,7 @@ function generateXML(callback){
     console.log(err);
             return;
         }
-        publisherStatus.lastDiscStatus = 1;
-        config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
-        config.save();
-        generateTS();
+        callback();
     });
     
 }
@@ -319,11 +242,8 @@ function generateTS(callback){
             return;
         }
         publisherStatus.complete = 0.45;
-        publisherStatus.lastDiscStatus = 2;
-        config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
         io.emit('publisherUpdate', publisherStatus);
-        config.save();
-        prepOutput();
+        callback();
     });
 }
 
@@ -366,11 +286,8 @@ function prepOutput(callback){
             publisherStatus.status = "No blank disc found, please insert one & press resume";
             publisherStatus.complete = 0.49;
             io.emit('publisherUpdate', publisherStatus);
-            /*publisherTimer = setTimeout(function(){
-                prepOutput();
-            }, 4000);*/
         } else {
-            writeOutput();
+            callback();
         }
     });
 }
@@ -416,31 +333,18 @@ function writeOutput(callback){
         console.log('Complete');
         publisherStatus.status = "Complete";
         publisherStatus.complete = 1;
-        publisherStatus.lastDiscStatus = 3;
-        config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
-        config.save();
         io.emit('publisherUpdate', publisherStatus);
-        setTimeout(function(){
-            publisherStatus.status = 0;
-            publisherStatus.complete = 0;
-            io.emit('publisherUpdate', publisherStatus);
-        }, 4000);
+        callback();
     });
 }
 
 
-
-
-
-
-
-
 // Send to FTP Server
-function uploadFile(callback){
+function uploadFile(file, server, username, password, callback){
     
     if(exiting){return;}
     
-    publisher = spawn('curl',['-T','publishing/file_working/'+destFName+'.mp4', (server.indexOf('ftp://')==0 ? server : 'ftp://'+server), '--user', username+':'+password],{cwd: process.cwd(), env: process.env, detached: true});
+    publisher = spawn('curl',['-T',file, (server.indexOf('ftp://')==0 ? server : 'ftp://'+server), '--user', username+':'+password],{cwd: process.cwd(), env: process.env, detached: true});
     
     console.log('Uploading File');
     publisherStatus.status = "Uploading File";
@@ -470,21 +374,119 @@ function uploadFile(callback){
         publisherStatus.status = "Complete";
         publisherStatus.complete = 1;
         io.emit('publisherUpdate', publisherStatus);
+        callback();
+    });
+}
+
+
+function finished(success) {
+    if(success){
         setTimeout(function(){
             publisherStatus.status = 0;
             publisherStatus.complete = 0;
             io.emit('publisherUpdate', publisherStatus);
         }, 4000);
-    });
+    }
 }
 
 
 
+function publishDisc(sourceFNames, menuFName, resume){
+    
+    if(exiting){return;}
+    
+    if(publisher){
+        io.emit('publisherUpdate', publisherStatus);
+        console.log('Already publishing...');
+        return;
+    }
+    
+    if(recorderStatus.recording){
+        io.emit('recorderUpdate', recorderStatus);
+        console.log('Recording; cannot publish.');
+        return;
+    }
+    
+    if (!resume) {
+        publisherStatus.lastDiscStatus = 0;
+        config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
+        config.save();
+    }
+    
+    var cb_finished = function () {
+        publisherStatus.lastDiscStatus = 3;
+        config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
+        config.save();
+        finished(true);
+        return;
+    };
+    
+    var cb_writeOutput = function () {
+        writeOutput(cb_finished);
+        return;
+    };
+    
+    var cb_prepOutput = function () {
+        publisherStatus.lastDiscStatus = 2;
+        config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
+        config.save();
+        prepOutput(cb_writeOutput);
+        return;
+    };
+    
+    var cb_generateTS = function () {
+        publisherStatus.lastDiscStatus = 1;
+        config.set('publisher:disc_status', publisherStatus.lastDiscStatus);
+        config.save();
+        generateTS(cb_prepOutput);
+        return;
+    };
+    
+    var cb_generateXML = function () {
+        generateXML(transcodedFiles, menuFName, cb_generateTS);
+        return;
+    };
+    
+    var cb_transcode = function () {
+        if (currentTcIndex < sourceFNames.length) {
+            transcodeVideo([sourceFNames[currentTcIndex]], 'pal-dvd', '', '', '', 'publishing/disc_working/vid'+currentTcIndex+'.mpg', cb_transcode);
+            transcodedFiles.push('vid'+currentTcIndex+'.mpg');
+            currentTcIndex++;
+        } else {
+            cb_generateXML();
+        }
+        return;
+    };
+    
+    var cb_setupDirs = function () {
+        setupDirs('publishing/', ['disc_working','disc_fs'], cb_transcode);
+        return;
+    };
+    
+    switch(publisherStatus.lastDiscStatus) {
+        case 1:
+            generateTS(cb_prepOutput);
+            break;
+        case 2:
+        case 3:
+            prepOutput(cb_writeOutput);
+            break;
+        default:
+            reloadRecordings();
+            // validate input file names
+            for (var i = 0; i < sourceFNames.length; i++) {
+                if(publisherFiles.indexOf(sourceFNames[i])<0){
+                    return;
+                }
+            }
+            currentTcIndex = 0;
+            transcodedFiles = [];
+            cleanDirs('publishing/', ['disc_working','disc_fs'], cb_setupDirs);
+    }
+    
+}
 
 
-
-
-// Change to publish file and add usb functionality
 function publishFTP(sourceFNames, destFName, server, username, password, resume){
     
     if(exiting){return;}
@@ -501,84 +503,54 @@ function publishFTP(sourceFNames, destFName, server, username, password, resume)
         return;
     }
     
-    reloadRecordings();
-    
-    // validate input file names
-    for (var i = 0; i < sourceFNames.length; i++) {
-        if(publisherFiles.indexOf(sourceFNames[i])<0){
-            return;
-        }
+    if (!resume) {
+        publisherStatus.lastFileStatus = 0;
+        config.set('publisher:file_status', publisherStatus.lastFileStatus);
+        config.save();
     }
     
-    initCleanDirs();
+    var cb_finished = function () {
+        publisherStatus.lastFileStatus = 2;
+        config.set('publisher:file_status', publisherStatus.lastFileStatus);
+        config.save();
+        finished(true);
+        return;
+    };
     
+    var cb_uploadFile = function () {
+        publisherStatus.lastFileStatus = 1;
+        config.set('publisher:file_status', publisherStatus.lastFileStatus);
+        config.save();
+        uploadFile(transcodedFiles[0], server, username, password, cb_finished);
+        return;
+    };
     
-    // Transcode Videos
-    function transcodeVideos(){
-        
-        if(exiting){return;}
-        
-        var inputLine = '';
-        if(sourceFNames.length<1){
-            publisherStatus.status = "Too few files. Cancelling";
-            publisherStatus.complete = 1;
-            io.emit('publisherUpdate', publisherStatus);
-            setTimeout(function(){
-                    publisherStatus.status = 0;
-                    publisherStatus.complete = 0;
-                    io.emit('publisherUpdate', publisherStatus);
-            }, 4000);
-        } else if(sourceFNames.length==1){
-            inputLine = sourceFNames[0];
-        } else {
-            inputLine = '"concat:'+recordDir+sourceFNames[0];
-            for (var i = 1; i < sourceFNames.length; i++) {
-                inputLine = inputLine+'|'+recordDir+sourceFNames[i];
-            }
-            inputLine = inputLine+'"';
-        }
-
-        publisher = spawn('ffmpeg', ['-i', inputLine,'-c:v','libx264','-b:v','6000k' , '-c:a', 'aac','-b:a','160k' ,'publishing/file_working/'+(destFName.indexOf('.mp4')>=0 ? destFName : destFName+'.mp4')],{cwd: process.cwd(), env: process.env, detached: true});
-        
-        console.log('Transcoding');
-        publisherStatus.status = "Transcoding";
-        publisherStatus.complete = publisherStatus.complete + 0.05;
-        io.emit('publisherUpdate', publisherStatus);
-        var duration = '00:00:00';
+    var cb_transcode = function () {
+        transcodeVideo(sourceFNames, 'libx264', '6000k', 'aac', '160k', 'publishing/file_working/'+destFName+'.mp4', cb_uploadFile);
+        transcodedFiles.push('publishing/file_working/'+destFName+'.mp4');
+        return;
+    };
     
-        publisher.on('error', function (err) {
-            console.log('FTP Export Failed. Error Transcoding File: '+err);
-            publisher.kill('SIGTERM');
-        });
-        
-        publisher.stderr.on('data', function (data) {
-            var output = String(data).split("\n");
-            for (var i = 0; i < output.length; i++) {
-		console.log(output[i]);
-                var tIndex = output[i].indexOf('time=');
-                if(tIndex>=0){
-                    publisherStatus.status = "Transcoding: "+output[i].substring(tIndex+5,tIndex+13)+"/"+duration;
-                    continue;
-                }
-                tIndex = output[i].indexOf('Duration: ');
-                if(tIndex>=0){
-                    duration = output[i].substring(tIndex+10,tIndex+18);
+    var cb_setupDirs = function () {
+        setupDirs('publishing/', ['file_working'], cb_transcode);
+        return;
+    };
+    
+    switch(publisherStatus.lastFileStatus) {
+        case 1:
+        case 2:
+            uploadFile(callback);
+            break;
+        default:
+            reloadRecordings();
+            // validate input file names
+            for (var i = 0; i < sourceFNames.length; i++) {
+                if(publisherFiles.indexOf(sourceFNames[i])<0){
+                    return;
                 }
             }
-            io.emit('publisherUpdate', publisherStatus);
-        });
-
-        publisher.on('exit', function (code) {
-            publisher.kill('SIGKILL');
-            publisher = 0;
-            if(exiting){
-                return;
-            }
-            io.emit('publisherUpdate', publisherStatus);
-            uploadFile();
-        });
+            transcodedFiles = [];
+            cleanDirs('publishing/', ['file_working'], cb_setupDirs);
     }
-    
-
     
 }

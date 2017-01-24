@@ -14,7 +14,7 @@
     },
     "recorder": {
         "port": 4990,
-        "out_dir": "/home/user/recordings/",
+        "out_dir": "/home/ian/Documents/",
         "v_bitrate": 12000,
         "a_bitrate": 128
     },

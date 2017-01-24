@@ -3,6 +3,7 @@ var socket = 0;
 var hmc = 0;
 var panStart = [0,0];
 var ptz = {camera:1, pan:0, tilt:0, zoom:0};
+var lastMouse = {clientY:-1};
 
 var atemStatus = {program:0,preview:0,aux:0,ftb:0,transLength:0.6,audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]};
 var enableALvls = 0;
@@ -17,6 +18,7 @@ var atemALvlPresets = [ {audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
 var mplayerStatus = {connected:0,playing:0};
 var publisherStatus = {status:0,complete:0};
+var volSliderMouseDown = false;
 
 guiElements = {pages:[],
     tabs:[],
@@ -26,7 +28,7 @@ guiElements = {pages:[],
     transLengthNumeric:0,
     aMixers:[{name:"master",channel:0,mute:1,volume:0,level:[],ref:[]},
     {name:"ch1",channel:1,mute:1,volume:0,level:[],ref:[]},
-    {name:"ch2",channel:2,mute:1,volume:0,level:[],ref:[]},
+    {name:"ch2",channel:2,mute:1,volume:0,vol_bar:0,level:[],ref:[]},
     {name:"ch3",channel:3,mute:1,volume:0,level:[],ref:[]},
     {name:"ch4",channel:4,mute:1,volume:0,level:[],ref:[]}],
     record:0,
@@ -148,8 +150,90 @@ function setAtemAudioMute(mixer){
     socket.emit('setAudioMute', {channel:guiElements.aMixers[mixer].channel,mute:(atemStatus.audioChannels[chnl][0]+1)%2});
 }
 
+/////////////////////////////////////////////
+function absorbEvent_(event) {
+    var e = event || window.event;
+    e.preventDefault && e.preventDefault();
+    e.stopPropagation && e.stopPropagation();
+    e.cancelBubble = true;
+    e.returnValue = false;
+    return false;
+}
+
+function preventLongPressMenu(node) {
+    node.ontouchstart = absorbEvent_;
+    node.ontouchmove = absorbEvent_;
+    node.ontouchend = absorbEvent_;
+    node.ontouchcancel = absorbEvent_;
+}
+
 function setAtemAudioVolume(mixer){
     socket.emit('setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:guiElements.aMixers[mixer].volume.value});
+}
+
+function volInitChange(ev, mixer){
+    volSliderMouseDown = true;
+    lastMouse.clientY = -1;
+    volChange(ev, mixer);
+}
+
+function volChange(ev, mixer){
+    
+    if(!volSliderMouseDown || lastMouse.clientY == ev.clientY){
+        return;
+    }
+    
+    guiElements.aMixers[mixer].volume.style.top = (ev.offsetY-(guiElements.aMixers[mixer].volume.offsetHeight/2))+'px';
+    
+    var vol = Math.round(6-((ev.offsetY/(guiElements.aMixers[mixer].vol_bar.offsetHeight))*67));
+
+    socket.emit('setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:vol});
+    console.log('Mixer '+mixer+': '+vol);
+    lastMouse = ev;
+}
+
+function volEndChange(){
+  volSliderMouseDown = false;
+}
+
+function volInitChange_Master(ev){
+    volInitChange(ev,0);
+}
+
+function volInitChange_1(ev){
+    volInitChange(ev,1);
+}
+
+function volInitChange_2(ev){
+    volInitChange(ev,2);
+}
+
+function volInitChange_3(ev){
+    volInitChange(ev,3);
+}
+
+function volInitChange_4(ev){
+    volInitChange(ev,4);
+}
+
+function volChange_Master(ev){
+    volChange(ev,0)
+}
+
+function volChange_1(ev){
+    volChange(ev,1)
+}
+
+function volChange_2(ev){
+    volChange(ev,2)
+}
+
+function volChange_3(ev){
+    volChange(ev,3)
+}
+
+function volChange_4(ev){
+    volChange(ev,4)
 }
 
 function runAtemAudioPreset(preset){
@@ -381,9 +465,12 @@ function guiAudioChannel(mixer){
         }
         
         //Set volume
-        guiElements.aMixers[mixer].volume.value = atemStatus.audioChannels[chnl][1];
+        //guiElements.aMixers[mixer].volume.value = atemStatus.audioChannels[chnl][1];
+        guiElements.aMixers[mixer].volume.style.top = (((atemStatus.audioChannels[chnl][1]-6)/-66)*guiElements.aMixers[mixer].vol_bar.offsetHeight)+'px';
+        
     } else {
-        guiElements.aMixers[0].volume.value = atemStatus.audioChannels[0][1];
+        //guiElements.aMixers[0].volume.value = atemStatus.audioChannels[0][1];
+        guiElements.aMixers[0].volume.style.top = (((atemStatus.audioChannels[0][1]-6)/-66)*guiElements.aMixers[0].vol_bar.offsetHeight)+'px';
     }
     
 }
@@ -531,7 +618,7 @@ function ptzZoom(){
 
 function ptzInitPan(ev){
     ev.preventDefault();
-    panStart[0] = guiElements.ptzHitarea.getBoundingClientRect().left - guiElements.ptzBoundBox.getBoundingClientRect().left;
+        panStart[0] = guiElements.ptzHitarea.getBoundingClientRect().left - guiElements.ptzBoundBox.getBoundingClientRect().left;
     panStart[1] = guiElements.ptzHitarea.getBoundingClientRect().top  - guiElements.ptzBoundBox.getBoundingClientRect().top;
     ptzPan(ev);
 }
@@ -539,7 +626,7 @@ function ptzInitPan(ev){
 function ptzPan(ev){
     
     ev.preventDefault();
-    guiElements.ptzHitarea.style.left = (panStart[0] + ev.deltaX) + 'px';
+        guiElements.ptzHitarea.style.left = (panStart[0] + ev.deltaX) + 'px';
     guiElements.ptzHitarea.style.top  = (panStart[1] + ev.deltaY) + 'px';
     
     var pan = Math.round((ev.deltaX/(guiElements.ptzBoundBox.clientWidth/2))*12.0);
@@ -625,6 +712,7 @@ function connectGui(){
     guiElements.transLengthNumeric = document.getElementById("transLength");
     
     guiElements.aMixers[0].volume = document.getElementById("aMixerMasterVolume");
+    guiElements.aMixers[0].vol_bar = document.getElementById("aMixerMasterVolBar");
     guiElements.aMixers[0].level = document.getElementsByClassName("aMixerMasterLevel");
     guiElements.aMixers[0].ref = document.getElementsByClassName("aMixerMasterRef");
 
@@ -632,6 +720,7 @@ function connectGui(){
     guiElements.aMixers[1].channel = 1;
     guiElements.aMixers[1].mute = document.getElementById("aMixerCh1Mute");
     guiElements.aMixers[1].volume = document.getElementById("aMixerCh1Volume");
+    guiElements.aMixers[1].vol_bar = document.getElementById("aMixerCh1VolBar");
     guiElements.aMixers[1].level = document.getElementsByClassName("aMixerCh1Level");
     guiElements.aMixers[1].ref = document.getElementsByClassName("aMixerCh1Ref");
 
@@ -639,6 +728,7 @@ function connectGui(){
     guiElements.aMixers[2].channel = 2;
     guiElements.aMixers[2].mute = document.getElementById("aMixerCh2Mute");
     guiElements.aMixers[2].volume = document.getElementById("aMixerCh2Volume");
+    guiElements.aMixers[2].vol_bar = document.getElementById("aMixerCh2VolBar");
     guiElements.aMixers[2].level = document.getElementsByClassName("aMixerCh2Level");
     guiElements.aMixers[2].ref = document.getElementsByClassName("aMixerCh2Ref");
     
@@ -646,6 +736,7 @@ function connectGui(){
     guiElements.aMixers[3].channel = 3;
     guiElements.aMixers[3].mute = document.getElementById("aMixerCh3Mute");
     guiElements.aMixers[3].volume = document.getElementById("aMixerCh3Volume");
+    guiElements.aMixers[3].vol_bar = document.getElementById("aMixerCh3VolBar");
     guiElements.aMixers[3].level = document.getElementsByClassName("aMixerCh3Level");
     guiElements.aMixers[3].ref = document.getElementsByClassName("aMixerCh3Ref");
     
@@ -653,6 +744,7 @@ function connectGui(){
     guiElements.aMixers[4].channel = 4;
     guiElements.aMixers[4].mute = document.getElementById("aMixerCh4Mute");
     guiElements.aMixers[4].volume = document.getElementById("aMixerCh4Volume");
+    guiElements.aMixers[4].vol_bar = document.getElementById("aMixerCh4VolBar");
     guiElements.aMixers[4].level = document.getElementsByClassName("aMixerCh4Level");
     guiElements.aMixers[4].ref = document.getElementsByClassName("aMixerCh4Ref");
     
@@ -687,6 +779,37 @@ function connectGui(){
             ptzReset();
         }
     });
+    
+    guiElements.aMixers[0].vol_bar.onmousedown = volInitChange_Master;
+    guiElements.aMixers[0].vol_bar.onmousemove = volChange_Master;
+    guiElements.aMixers[0].vol_bar.onmouseleave = volEndChange;
+    guiElements.aMixers[0].vol_bar.onmouseup = volEndChange;
+    preventLongPressMenu(guiElements.aMixers[0].vol_bar);
+    
+    guiElements.aMixers[1].vol_bar.onmousedown = volInitChange_1;
+    guiElements.aMixers[1].vol_bar.onmousemove = volChange_1;
+    guiElements.aMixers[1].vol_bar.onmouseleave = volEndChange;
+    guiElements.aMixers[1].vol_bar.onmouseup = volEndChange;
+    preventLongPressMenu(guiElements.aMixers[1].vol_bar);
+    
+    guiElements.aMixers[2].vol_bar.onmousedown = volInitChange_2;
+    guiElements.aMixers[2].vol_bar.onmousemove = volChange_2;
+    guiElements.aMixers[2].vol_bar.onmouseleave = volEndChange;
+    guiElements.aMixers[2].vol_bar.onmouseup = volEndChange;
+    preventLongPressMenu(guiElements.aMixers[2].vol_bar);
+    
+    guiElements.aMixers[3].vol_bar.onmousedown = volInitChange_3;
+    guiElements.aMixers[3].vol_bar.onmousemove = volChange_3;
+    guiElements.aMixers[3].vol_bar.onmouseleave = volEndChange;
+    guiElements.aMixers[3].vol_bar.onmouseup = volEndChange;
+    preventLongPressMenu(guiElements.aMixers[3].vol_bar);
+    
+    guiElements.aMixers[4].vol_bar.onmousedown = volInitChange_4;
+    guiElements.aMixers[4].vol_bar.onmousemove = volChange_4;
+    guiElements.aMixers[4].vol_bar.onmouseleave = volEndChange;
+    guiElements.aMixers[4].vol_bar.onmouseup = volEndChange;
+    preventLongPressMenu(guiElements.aMixers[4].vol_bar);
+    
 }
 
 if (!(window.WebSocket)){
