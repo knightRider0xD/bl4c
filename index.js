@@ -76,7 +76,7 @@ var mplayerWait = 0;
 // Publisher Vars
 var publisher = 0;
 var publisherTimer = 0;
-var publisherStatus = {status:0,complete:0,
+var publisherStatus = {status:0,complete:0,locked:0,
                        lastDiscStatus:config.get('publisher:disc_status'),
                        lastFileStatus:config.get('publisher:file_status')};
 var publisherFiles = [];
@@ -563,7 +563,7 @@ function getRemainingRecordingSpace(){
         }
         if (spaceRemaining < 0){
             recorderStatus.remainingSpace = 'Remaining&nbsp;Space&nbsp;Unavailable';
-            console.log(recorderStatus.remainingSpace);
+            console.log('Remaining Space Unavailable');
             return;
         }
         var t = spaceRemaining/((recordVB+recordAB)/8)
@@ -572,7 +572,7 @@ function getRemainingRecordingSpace(){
         var h = m/60;
             m = m%60;
         recorderStatus.remainingSpace = (spaceRemaining/1048576).toFixed(2)+'GB&nbsp;Remaining&nbsp;(Approximately&nbsp;'+h.toFixed(0)+'h'+m.toFixed(0)+'m'+s.toFixed(0)+'s)';
-        console.log(recorderStatus.remainingSpace);
+        console.log((spaceRemaining/1048576).toFixed(2)+'GB Remaining (Approximately '+h.toFixed(0)+'h'+m.toFixed(0)+'m'+s.toFixed(0)+'s)');
     });
     
 }
@@ -716,7 +716,7 @@ function cleanDirs(root, names, callback){
     }
     
     for (var i = 0; i < names.length; i++) {
-        names[i] = '"'+root+names[i]+'"';
+        names[i] = root+names[i];
     }
     
     publisher = spawn('rm', ['-rf'].concat(names),{cwd: process.cwd(), env: process.env, detached: true});
@@ -754,7 +754,7 @@ function setupDirs(root, names, callback){
     }
     
     for (var i = 0; i < names.length; i++) {
-        names[i] = '"'+root+names[i]+'"';
+        names[i] = root+names[i];
     }
     
     publisher = spawn('mkdir', ['-p'].concat(names),{cwd: process.cwd(), env: process.env, detached: true});
@@ -777,7 +777,6 @@ function setupDirs(root, names, callback){
         }
         publisherStatus.complete = 0.05;
         io.emit('publisherUpdate', publisherStatus);
-        //transcodeVideos(0);
         callback();
     });
 }
@@ -799,11 +798,11 @@ function transcodeVideo(srcFiles, vc, vb, ac, ab, destFile, callback){
         }, 4000);
         return;
     } else if(srcFiles.length==1){
-        inputArgs = ['-i', srcFiles[0]];
+        inputArgs = ['-i', recordDir+srcFiles[0]];
     } else {
         for (var i = 0; i < srcFiles.length; i++) {
             inputArgs.push('-i');
-            inputArgs.push(srcFiles[i]);
+            inputArgs.push(recordDir+srcFiles[i]);
         }
         inputArgs.push('-filter_complex');
         var concats = '';
@@ -827,7 +826,7 @@ function transcodeVideo(srcFiles, vc, vb, ac, ab, destFile, callback){
     
     publisher = spawn('ffmpeg', args, {cwd: process.cwd(), env: process.env, detached: true});
     
-    console.log('Transcoding '+srcFiles[0]);
+    console.log('Transcoding '+srcFiles[0]+' '+args);
     publisherStatus.status = "Transcoding "+srcFiles[0];
     publisherStatus.complete = publisherStatus.complete + 0.05;
     io.emit('publisherUpdate', publisherStatus);
@@ -1081,6 +1080,52 @@ function uploadFile(file, server, username, password, callback){
 }
 
 
+// Copy to destination path
+function copyFile(file, path, callback){
+    
+    if(exiting){return;}
+    
+    var fullPath = publisherFlashDiskDir;
+    if (!fullPath.endsWith('/')){
+        fullPath = fullPath + '/';
+    }
+    fullPath = fullPath + path;
+    
+    publisherStatus.locked = 1;
+    
+    publisher = spawn('curl',['-o', fullPath, 'file://'+process.cwd()+'/'+file],{cwd: process.cwd(), env: process.env, detached: true});
+    
+    console.log('Copying File');
+    publisherStatus.status = "Copying File";
+    publisherStatus.complete = 0.5;
+    io.emit('publisherUpdate', publisherStatus);
+
+    publisher.on('error', function (err) {
+        console.log('File Copy Failed:'+err);
+        publisher.kill('SIGTERM');
+    });
+    
+    publisher.stderr.on('data', function (data) {
+        var output = String(data).split("\n");
+        for (var i = 0; i < output.length; i++) {
+            publisherStatus.status = "Uploading File: "+output[i]+"&#37;";
+        }
+        io.emit('publisherUpdate', publisherStatus);
+    });
+
+    publisher.on('exit', function (code) {
+        publisher.kill('SIGKILL');
+        publisher = 0;
+        if(exiting){
+            return;
+        }
+        console.log('Complete');
+        publisherStatus.status = "Complete";
+        publisherStatus.complete = 1;
+        io.emit('publisherUpdate', publisherStatus);
+        callback();
+    });
+}
 
 
 function reloadFlashDisks(){
@@ -1090,8 +1135,8 @@ function reloadFlashDisks(){
             console.log('error listing removable disks');
             return;
         }
-        //publisherFiles = files.slice();
-        //io.emit('recordingList', publisherFiles);
+        removableDisks = files.slice();
+        io.emit('removableDisks', removableDisks);
     });
 }
 
@@ -1177,6 +1222,8 @@ function checkFSClear(dev, attempts, timeout, callback){
             return;
         } else {
             if(output[8] == '0'){
+                publisherStatus.locked = 0;
+                io.emit('publisherUpdate', publisherStatus);
                 callback(true);
             } else {
                 setTimeout(function(){
@@ -1343,7 +1390,7 @@ function publishDisc(sourceFNames, menuFName, resume){
 }
 
 
-function publishFTP(sourceFNames, destFName, server, username, password, resume){
+function publishFTP(sourceFNames, destFName, transcode, server, username, password, resume){
     
     if(exiting){return;}
     
@@ -1387,15 +1434,129 @@ function publishFTP(sourceFNames, destFName, server, username, password, resume)
         return;
     };
     
+    var cb_noTranscode = function () {
+        for (var i = 0; i < sourceFNames.length; i++) {
+            transcodedFiles.push(recordDir+sourceFNames[i]);
+        }
+        cb_uploadFile();
+        return;
+    };
+    
     var cb_setupDirs = function () {
-        setupDirs('publishing/', ['file_working'], cb_transcode);
+        if (transcode) {
+            setupDirs('publishing/', ['file_working'], cb_transcode);
+        } else {
+            setupDirs('publishing/', ['file_working'], cb_noTranscode);
+        }
         return;
     };
     
     switch(publisherStatus.lastFileStatus) {
         case 1:
         case 2:
-            uploadFile(callback);
+            uploadFile(cb_finished);
+            break;
+        default:
+            reloadRecordings();
+            // validate input file names
+            for (var i = 0; i < sourceFNames.length; i++) {
+                if(publisherFiles.indexOf(sourceFNames[i])<0){
+                    return;
+                }
+            }
+            transcodedFiles = [];
+            cleanDirs('publishing/', ['file_working'], cb_setupDirs);
+    }
+    
+}
+
+
+function publishRemovableDrive(sourceFNames, destFName, transcode, path, resume){
+    
+    if(exiting){return;}
+    
+    if(publisher){
+        io.emit('publisherUpdate', publisherStatus);
+        console.log('Already publishing...');
+        return;
+    }
+    
+    if(recorderStatus.recording){
+        io.emit('recorderUpdate', recorderStatus);
+        console.log('Recording; cannot publish.');
+        return;
+    }
+    
+    if (!resume) {
+        publisherStatus.lastFileStatus = 0;
+        config.set('publisher:file_status', publisherStatus.lastFileStatus);
+        config.save();
+    }
+    
+    var cb_finished = function () {
+        publisherStatus.lastFileStatus = 2;
+        console.log('Complete. Safe to remove.');
+        publisherStatus.status = "Complete. It is now safe to remove the drive.";
+        publisherStatus.complete = 0.9;
+        config.set('publisher:file_status', publisherStatus.lastFileStatus);
+        config.save();
+        finished(true);
+        return;
+    };
+    
+    var cb_syncAndClear2 = function (success) {
+        if(success){
+            cb_finished();
+        } else {
+            syncAndClear(path, cb_syncAndClear2);
+        }
+        return;
+    };
+    
+    var cb_syncAndClear = function () {
+        console.log('Waiting for drive');
+        publisherStatus.status = "Waiting for drive";
+        publisherStatus.complete = 0.9;
+        io.emit('publisherUpdate', publisherStatus);
+        syncAndClear(path, cb_syncAndClear2);
+        return;
+    };
+    
+    var cb_copyFile = function () {
+        publisherStatus.lastFileStatus = 1;
+        config.set('publisher:file_status', publisherStatus.lastFileStatus);
+        config.save();
+        copyFile(transcodedFiles[0], server, username, password, cb_finished);
+        return;
+    };
+    
+    var cb_transcode = function () {
+        transcodeVideo(sourceFNames, 'libx264', '6000k', 'aac', '160k', 'publishing/file_working/'+destFName+'.mp4', cb_copyFile);
+        transcodedFiles.push('publishing/file_working/'+destFName+'.mp4');
+        return;
+    };
+    
+    var cb_noTranscode = function () {
+        for (var i = 0; i < sourceFNames.length; i++) {
+            transcodedFiles.push(recordDir+sourceFNames[i]);
+        }
+        cb_copyFile();
+        return;
+    };
+    
+    var cb_setupDirs = function () {
+        if (transcode) {
+            setupDirs('publishing/', ['file_working'], cb_transcode);
+        } else {
+            setupDirs('publishing/', ['file_working'], cb_noTranscode);
+        }
+        return;
+    };
+    
+    switch(publisherStatus.lastFileStatus) {
+        case 1:
+        case 2:
+            copyFile(cb_finished);
             break;
         default:
             reloadRecordings();
@@ -1459,15 +1620,6 @@ function sendViscaPanTilt(camera,panSpeed,tiltSpeed){
     else if(panSpeed < 0 && tiltSpeed >= 0){cmdName = 'set_pantilt_upleft'; panSpeed*=-1;}
     else if(panSpeed >= 0 && tiltSpeed < 0){cmdName = 'set_pantilt_downright'; tiltSpeed*=-1;}
     else if(panSpeed < 0 && tiltSpeed < 0){cmdName = 'set_pantilt_downleft'; panSpeed*=-1; tiltSpeed*=-1;}
-    //else if(panSpeed > 0 && tiltSpeed > 0){cmdName = 'set_pantilt_upright';}
-    //else if(panSpeed < 0 && tiltSpeed > 0){cmdName = 'set_pantilt_upleft'; panSpeed*=-1;}
-    //else if(panSpeed > 0 && tiltSpeed < 0){cmdName = 'set_pantilt_downright'; tiltSpeed*=-1;}
-    //else if(panSpeed < 0 && tiltSpeed < 0){cmdName = 'set_pantilt_downleft'; panSpeed*=-1; tiltSpeed*=-1;}
-    //else if(panSpeed == 0 && tiltSpeed > 0){cmdName = 'set_pantilt_up'; panSpeed=1;}
-    //else if(panSpeed == 0 && tiltSpeed < 0){cmdName = 'set_pantilt_down'; tiltSpeed*=-1;}
-    //else if(panSpeed > 0 && tiltSpeed == 0){cmdName = 'set_pantilt_right'; tiltSpeed=1;}
-    //else if(panSpeed < 0 && tiltSpeed == 0){cmdName = 'set_pantilt_left'; panSpeed*=-1;}
-    
     
     visca = spawn('./visca/visca-cli-multi', ['-d','/dev/ttyUSB0','camera',camera,cmdName,panSpeed,tiltSpeed],{cwd: process.cwd(), env: process.env, detached: true});
     
@@ -1814,11 +1966,15 @@ function initSIO(){
         });
         
         socket.on('burnDisc', function(discInfo){
-            publishDisc(discInfo.sourceFNames, 'menu01.mpg', false);
+            publishDisc(discInfo.sourceFNames, 'menu01.mpg', discInfo.resume);
         });
         
         socket.on('uploadFile', function(uploadInfo){
-            publishFTP(uploadInfo.sourceFNames, uploadInfo.destFName, uploadInfo.server, uploadInfo.username, uploadInfo.password, false);
+            publishFTP(uploadInfo.sourceFNames, uploadInfo.destFName, uploadInfo.transcode, uploadInfo.server, uploadInfo.username, uploadInfo.password, uploadInfo.resume);
+        });
+        
+        socket.on('copyFile', function(copyInfo){
+            publishFTP(copyInfo.sourceFNames, copyInfo.destFName, copyInfo.transcode, copyInfo.path, copyInfo.resume);
         });
 
         socket.on('cancelPublish', function(){

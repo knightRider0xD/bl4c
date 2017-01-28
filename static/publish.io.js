@@ -19,6 +19,7 @@ guiElements = {pages:[],
     uploadPwd:0,
     uploadOutName:0,
     uploadStartBtn:0,
+    uploadResumeBtn:0,
     progressText:0,
     currentProgress:0}
 
@@ -139,13 +140,22 @@ function burnDisc(resume){
     socket.emit('burnDisc', {resume:resume, sourceFNames:fileList});
 }
 
-function uploadFile(){
+function uploadFile(resume){
     var fileList = [];
     for (var i=0; i<guiElements.publishFileList.options.length; i++) {
         fileList.push(guiElements.publishFileList.options[i].value);
     }
     
-    socket.emit('uploadFile', {sourceFNames:fileList,destFName:guiElements.uploadOutName.value,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
+    socket.emit('uploadFile', {resume:resume, sourceFNames:fileList,destFName:guiElements.uploadOutName.value,transcode:true,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
+}
+
+function copyFile(resume){
+    var fileList = [];
+    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
+        fileList.push(guiElements.publishFileList.options[i].value);
+    }
+    
+    socket.emit('copyFile', {resume:resume, sourceFNames:fileList,destFName:guiElements.uploadOutName.value,transcode:true,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
 }
 
 function cancelPublish(){

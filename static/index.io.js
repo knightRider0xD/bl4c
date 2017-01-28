@@ -17,11 +17,13 @@ var atemALvlPresets = [ {audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0
                         
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
 var mplayerStatus = {connected:0,playing:0};
-var publisherStatus = {status:0,complete:0};
+var publisherStatus = {status:0,complete:0,lastDiscStatus:0,lastFileStatus:0};
 var volSliderMouseDown = false;
 
-guiElements = {pages:[],
-    tabs:[],
+guiElements = {
+    main:0,
+    mainPages:[],
+    mainTabs:[],
     progBtns:[],
     prevBtns:[],
     auxBtns:[],
@@ -31,9 +33,9 @@ guiElements = {pages:[],
     {name:"ch2",channel:2,mute:1,volume:0,vol_bar:0,level:[],ref:[]},
     {name:"ch3",channel:3,mute:1,volume:0,level:[],ref:[]},
     {name:"ch4",channel:4,mute:1,volume:0,level:[],ref:[]}],
-    record:0,
-    stop:0,
-    publish:0,
+    recordBtn:0,
+    stopBtn:0,
+    publishBtn:0,
     recordSpaceRemain:0,
     recordStatus:0,
     settings:0,
@@ -47,8 +49,51 @@ guiElements = {pages:[],
     ptzZoomLvl:0,
     ptzHitarea:0,
     ptzBoundBox:0,
-    ptzCams:[]}
+    ptzCams:[],
+    
+    publish:0,
+    publishPages:[],
+    publishTabs:[],
+    controlContainer:0,
+    progressContainer:0,
+    sourceFileList:0,
+    publishCopyBtn:0,
+    publishDeleteBtn:0,
+    publishFileList:0,
+    burnerStartBtn:0,
+    burnerResumeBtn:0,
+    fileStartBtn:0,
+    fileResumeBtn:0,
+    uploadURI:0,
+    uploadUser:0,
+    uploadPwd:0,
+    uploadOutName:0,
+    uploadStartBtn:0,
+    uploadResumeBtn:0,
+    progressText:0,
+    currentProgress:0
+}
 
+function main(){
+    
+    guiElements.publish.style.display = "none";
+    guiElements.main.style.display = "block";
+    
+    enableALvls = 1;
+    
+}
+
+function publish(){
+    
+    socket.emit('getRecordingList');
+    
+    guiElements.main.style.display = "none";
+    guiElements.publish.style.display = "block";
+    
+    enableALvls = 0;
+    atemALvl = {audioLevels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]};
+    
+}
 
 function onAtemUpdate(status){
     atemStatus = status;
@@ -101,6 +146,7 @@ function onPublisherUpdate(status){
     //console.log(status);
     
     guiRecord(); //set record
+    guiPublishProgress(); //set publish
     
 }
 
@@ -193,7 +239,7 @@ function volChange(ev, mixer){
 }
 
 function volEndChange(){
-  volSliderMouseDown = false;
+    volSliderMouseDown = false;
 }
 
 function volInitChange_Master(ev){
@@ -246,10 +292,6 @@ function record(){
 
 function stopRecord(){
     socket.emit('record',0);
-}
-
-function publish(){
-    window.location = "/publish";
 }
 
 function playMedia(){
@@ -306,17 +348,17 @@ function guiPTZCameraSwitcher(cam){
 /**
  * Updates the interface's tabs/pages
  */
-function guiPageSwitcher(page){
+function guiMainPageSwitcher(page){
     
-    var length = (guiElements.pages.length < guiElements.tabs.length) ? guiElements.pages.length : guiElements.tabs.length;
+    var length = (guiElements.mainPages.length < guiElements.mainTabs.length) ? guiElements.mainPages.length : guiElements.mainTabs.length;
     
     for (var i = 0; i < length; i++) {
         if(i==page){
-            guiElements.tabs[i].className = "indexTab active";
-            guiElements.pages[i].style = "";
+            guiElements.mainTabs[i].className = "indexTab active";
+            guiElements.mainPages[i].style.display = "block";
         } else {
-            guiElements.tabs[i].className = "indexTab";
-            guiElements.pages[i].style = "display:none;";
+            guiElements.mainTabs[i].className = "indexTab";
+            guiElements.mainPages[i].style.display = "none";
         }
     }
     
@@ -465,11 +507,9 @@ function guiAudioChannel(mixer){
         }
         
         //Set volume
-        //guiElements.aMixers[mixer].volume.value = atemStatus.audioChannels[chnl][1];
         guiElements.aMixers[mixer].volume.style.top = (((atemStatus.audioChannels[chnl][1]-6)/-66)*guiElements.aMixers[mixer].vol_bar.offsetHeight)+'px';
         
     } else {
-        //guiElements.aMixers[0].volume.value = atemStatus.audioChannels[0][1];
         guiElements.aMixers[0].volume.style.top = (((atemStatus.audioChannels[0][1]-6)/-66)*guiElements.aMixers[0].vol_bar.offsetHeight)+'px';
     }
     
@@ -526,42 +566,42 @@ function guiRecord(){
     if(recorderStatus.connected<=0){
         guiElements.recordSpaceRemain.innerHTML = "<b>Recording Space:</b> "+recorderStatus.remainingSpace;
         guiElements.recordStatus.innerHTML = "<b>Recorder Offline</b>";
-        guiElements.record.className = guiElements.record.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
-        guiElements.record.innerHTML = 'RECORD';
-        guiElements.publish.className = guiElements.publish.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
-        guiElements.publish.innerHTML = 'PUBLISH';
-        guiElements.publish.disabled = false;
-        guiElements.record.disabled = true;
-        guiElements.stop.disabled = true;
+        guiElements.recordBtn.className = guiElements.recordBtn.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
+        guiElements.recordBtn.innerHTML = 'RECORD';
+        guiElements.publishBtn.className = guiElements.publishBtn.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
+        guiElements.publishBtn.innerHTML = 'PUBLISH';
+        guiElements.publishBtn.disabled = false;
+        guiElements.recordBtn.disabled = true;
+        guiElements.stopBtn.disabled = true;
     } else if(recorderStatus.recording){
         guiElements.recordSpaceRemain.innerHTML = "<b>Recording Space:</b> Unavailable&nbsp;while&nbsp;recording";
         guiElements.recordStatus.innerHTML = "<b>Currently Recording</b>";
-        guiElements.record.className = guiElements.record.className.replace( /(?:^|\s)btn-default(?!\S)/g , ' btn-danger ' );
-        guiElements.record.innerHTML = 'NOW RECORDING';
-        guiElements.publish.className = guiElements.publish.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
-        guiElements.publish.disabled = true;
-        guiElements.stop.disabled = false;
-        guiElements.record.disabled = true;
+        guiElements.recordBtn.className = guiElements.recordBtn.className.replace( /(?:^|\s)btn-default(?!\S)/g , ' btn-danger ' );
+        guiElements.recordBtn.innerHTML = 'NOW RECORDING';
+        guiElements.publishBtn.className = guiElements.publishBtn.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
+        guiElements.publishBtn.disabled = true;
+        guiElements.stopBtn.disabled = false;
+        guiElements.recordBtn.disabled = true;
     } else if(publisherStatus.status!=0){
         guiElements.recordSpaceRemain.innerHTML = "<b>Recording Space:</b> "+recorderStatus.remainingSpace;
         guiElements.recordStatus.innerHTML = "<b>Unable to Record</b> (Publishing)";
-        guiElements.record.className = guiElements.record.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
-        guiElements.record.innerHTML = 'RECORD';
-        guiElements.publish.className = guiElements.publish.className.replace( /(?:^|\s)btn-default(?!\S)/g , ' btn-primary ' );
-        guiElements.publish.innerHTML = 'PUBLISHING';
-        guiElements.publish.disabled = true;
-        guiElements.stop.disabled = true;
-        guiElements.record.disabled = true;
+        guiElements.recordBtn.className = guiElements.recordBtn.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
+        guiElements.recordBtn.innerHTML = 'RECORD';
+        guiElements.publishBtn.className = guiElements.publishBtn.className.replace( /(?:^|\s)btn-default(?!\S)/g , ' btn-primary ' );
+        guiElements.publishBtn.innerHTML = 'PUBLISHING';
+        guiElements.publishBtn.disabled = true;
+        guiElements.stopBtn.disabled = true;
+        guiElements.recordBtn.disabled = true;
     } else {
         guiElements.recordSpaceRemain.innerHTML = "<b>Recording Space:</b> "+recorderStatus.remainingSpace;
         guiElements.recordStatus.innerHTML = "<b>Currently Recording</b>";
-        guiElements.record.className = guiElements.record.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
-        guiElements.record.innerHTML = 'RECORD';
-        guiElements.publish.className = guiElements.publish.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
-        guiElements.publish.innerHTML = 'PUBLISH';
-        guiElements.publish.disabled = false;
-        guiElements.record.disabled = false;
-        guiElements.stop.disabled = true;
+        guiElements.recordBtn.className = guiElements.recordBtn.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
+        guiElements.recordBtn.innerHTML = 'RECORD';
+        guiElements.publishBtn.className = guiElements.publishBtn.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
+        guiElements.publishBtn.innerHTML = 'PUBLISH';
+        guiElements.publishBtn.disabled = false;
+        guiElements.recordBtn.disabled = false;
+        guiElements.stopBtn.disabled = true;
     }
     
     
@@ -655,6 +695,140 @@ function ptzRecallPreset(preset){
 }
 
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+function onRecordingList(list){
+    
+    // Clear list
+    while (sourceFileList.options.length>0) {
+        sourceFileList.remove(0);
+    }
+    
+    // Write new elements
+    for (var i = 0; i < list.length; i++) {
+        var opt = document.createElement("option");
+        opt.innerHTML = list[i];
+        // Append it to the select element
+        sourceFileList.add(opt,0);
+    }
+    
+}
+
+/**
+ * Updates the interface's tabs/pages
+ */
+function guiPublishPageSwitcher(page){
+    
+    var length = (guiElements.publishPages.length < guiElements.publishTabs.length) ? guiElements.publishPages.length : guiElements.publishTabs.length;
+    
+    for (var i = 0; i < length; i++) {
+        if(i==page){
+            guiElements.publishTabs[i].className = "publishTab active";
+            guiElements.publishPages[i].style.display = "block";
+        } else {
+            guiElements.publishTabs[i].className = "publishTab";
+            guiElements.publishPages[i].style.display = "none";
+        }
+    }
+    
+}
+
+/**
+ * Updates the interface's program chooser
+ */
+function guiPublishProgress(){
+    
+    if(publisherStatus.status==0){
+        guiElements.controlContainer.style = "";
+        guiElements.progressContainer.style = "display:none;";
+    } else {
+        guiElements.controlContainer.style = "display:none;";
+        guiElements.progressContainer.style = "";
+        
+        guiElements.currentProgress.style = "width:"+(publisherStatus.complete*100)+"%;";
+        guiElements.progressText.innerHTML = publisherStatus.status;
+    }
+    
+    if(publisherStatus.lastDiscStatus==3) {
+        guiElements.burnerResumeBtn.removeAttribute("disabled");
+        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>&nbsp;COPY LAST'
+    } else if(publisherStatus.lastDiscStatus>0){
+        guiElements.burnerResumeBtn.removeAttribute("disabled");
+        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span>&nbsp;RESUME LAST'
+    } else {
+        guiElements.burnerResumeBtn.setAttribute("disabled","true");
+        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;RESUME/COPY'
+    }
+    
+}
+
+//burner stuff
+
+function copyToPublishList(){
+    
+    // Iterate over options
+    for (var i=0; i<sourceFileList.options.length; i++) {
+        
+        // check if selected
+        if ( sourceFileList.options[i].selected ) {
+            // if yes, copy to publish list
+            var opt = document.createElement("option");
+            opt.innerHTML = sourceFileList.options[i].innerHTML;
+            guiElements.publishFileList.add(opt);
+        }
+    }
+    
+}
+
+function deleteFromPublishList(){
+    
+    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
+        
+        // check if selected
+        if ( guiElements.publishFileList.options[i].selected ) {
+            // if yes, remove from publish list
+            var opt = document.createElement("option");
+            opt.innerHTML = sourceFileList.options[i].innerHTML;
+            guiElements.publishFileList.remove(i);
+            return;
+        }
+    }
+}
+
+function burnDisc(resume){
+    var fileList = [];
+    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
+        fileList.push(guiElements.publishFileList.options[i].value);
+    }
+    
+    socket.emit('burnDisc', {resume:resume, sourceFNames:fileList});
+}
+
+function uploadFile(resume){
+    var fileList = [];
+    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
+        fileList.push(guiElements.publishFileList.options[i].value);
+    }
+    
+    socket.emit('uploadFile', {resume:resume, sourceFNames:fileList,destFName:guiElements.uploadOutName.value,transcode:true,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
+}
+
+function copyFile(resume){
+    var fileList = [];
+    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
+        fileList.push(guiElements.publishFileList.options[i].value);
+    }
+    
+    socket.emit('copyFile', {resume:resume, sourceFNames:fileList,destFName:guiElements.uploadOutName.value,transcode:true,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
+}
+
+function cancelPublish(){
+    socket.emit('cancelPublish');
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 /**
  * Opens a socket.io connection back to the server
  * requires socket.io client library to already be loaded
@@ -675,6 +849,7 @@ function connectServer(){
     socket.on("recorderUpdate", function (status) {onRecorderUpdate(status);});
     socket.on("mplayerUpdate", function (status) {onMplayerUpdate(status);});
     socket.on("publisherUpdate", function (status) {onPublisherUpdate(status);});
+    socket.on("recordingList", function (list) {console.log(list); onRecordingList(list);});
 }
 
 /**
@@ -689,8 +864,10 @@ window.onbeforeunload = function(e) {
  */
 function connectGui(){
     
-    guiElements.pages = document.getElementsByClassName("indexPage");
-    guiElements.tabs = document.getElementsByClassName("indexTab");
+    guiElements.main = document.getElementById("main");
+    
+    guiElements.mainPages = document.getElementsByClassName("indexPage");
+    guiElements.mainTabs = document.getElementsByClassName("indexTab");
     
     var nl = document.getElementsByClassName("progBtn");
     for (var i = 0; i < nl.length; i++) {
@@ -748,9 +925,9 @@ function connectGui(){
     guiElements.aMixers[4].level = document.getElementsByClassName("aMixerCh4Level");
     guiElements.aMixers[4].ref = document.getElementsByClassName("aMixerCh4Ref");
     
-    guiElements.record = document.getElementById("recordBtn");
-    guiElements.stop = document.getElementById("stopBtn");
-    guiElements.publish = document.getElementById("publishBtn");
+    guiElements.recordBtn = document.getElementById("recordBtn");
+    guiElements.stopBtn = document.getElementById("stopBtn");
+    guiElements.publishBtn = document.getElementById("publishBtn");
     guiElements.recordSpaceRemain = document.getElementById("recordSpaceLbl");
     guiElements.recordStatus = document.getElementById("recordStatusLbl");
     
@@ -768,6 +945,29 @@ function connectGui(){
     guiElements.ptzBoundBox = document.getElementById("ptzBoundBox");
     guiElements.ptzHitarea = document.getElementById("ptzHitarea");
     guiElements.ptzCams = document.getElementsByClassName("ptzCamTab");
+    
+    guiElements.publish = document.getElementById("publish");
+    guiElements.publishPages = document.getElementsByClassName("publishPage");
+    guiElements.publishTabs = document.getElementsByClassName("publishTab");
+    guiElements.controlContainer = document.getElementById("controls");
+    guiElements.progressContainer = document.getElementById("progress");
+    guiElements.sourceFileList = document.getElementById("sourceFileList");
+    guiElements.publishCopyBtn = document.getElementById("publishCopyBtn");
+    guiElements.publishDeleteBtn = document.getElementById("publishDeleteBtn");
+    guiElements.publishFileList = document.getElementById("publishFileList");
+    guiElements.burnerStartBtn = document.getElementById("burnerStartBtn");
+    guiElements.burnerResumeBtn = document.getElementById("burnerResumeBtn");
+    guiElements.fileStartBtn = document.getElementById("fileStartBtn");
+    guiElements.fileResumeBtn = document.getElementById("fileResumeBtn");
+    
+    guiElements.uploadURI = document.getElementById("uploadURI");
+    guiElements.uploadUser = document.getElementById("uploadUser");
+    guiElements.uploadPwd = document.getElementById("uploadPwd");
+    guiElements.uploadOutName = document.getElementById("uploadOutName");
+    guiElements.uploadStartBtn = document.getElementById("uploadStartBtn");
+    guiElements.uploadResumeBtn = document.getElementById("uploadResumeBtn");
+    guiElements.progressText = document.getElementById("progressText");
+    guiElements.currentProgress = document.getElementById("currentProgress");
     
     hmc = new Hammer.Manager(guiElements.ptzHitarea);
     hmc.add(new Hammer.Pan({ threshold: 10, pointers: 0 }));
