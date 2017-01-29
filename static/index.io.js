@@ -18,7 +18,7 @@ var atemALvlPresets = [ {audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
 var mplayerStatus = {connected:0,playing:0};
 var publisherStatus = {status:0,complete:0,lastDiscStatus:0,lastFileStatus:0};
-var volSliderMouseDown = false;
+var volFaderMouseDown = 0;
 
 guiElements = {
     main:0,
@@ -218,14 +218,14 @@ function setAtemAudioVolume(mixer){
 }
 
 function volInitChange(ev, mixer){
-    volSliderMouseDown = true;
+    volFaderMouseDown = mixer;
     lastMouse.clientY = -1;
     volChange(ev, mixer);
 }
 
 function volChange(ev, mixer){
     
-    if(!volSliderMouseDown || lastMouse.clientY == ev.clientY){
+    if(volFaderMouseDown!=mixer || lastMouse.clientY == ev.clientY){
         return;
     }
     
@@ -239,7 +239,9 @@ function volChange(ev, mixer){
 }
 
 function volEndChange(){
-    volSliderMouseDown = false;
+    var mixer = volFaderMouseDown;
+    volFaderMouseDown = -1;
+    guiAudioChannel(mixer);
 }
 
 function volInitChange_Master(ev){
@@ -506,11 +508,16 @@ function guiAudioChannel(mixer){
             guiElements.aMixers[mixer].ref[5].className = guiElements.aMixers[mixer].ref[5].className.replace( /(?:^|\s)volume-bar-over(?!\S)/g , ' volume-bar-over-muted ' ); //dark grey
         }
         
-        //Set volume
-        guiElements.aMixers[mixer].volume.style.top = (((atemStatus.audioChannels[chnl][1]-6)/-66)*guiElements.aMixers[mixer].vol_bar.offsetHeight)+'px';
+        // Update mixer fader position (except if the user is interacting with the volume fader for this mixer)
+        if(volFaderMouseDown!=(mixer)){
+            guiElements.aMixers[mixer].volume.style.top = (((atemStatus.audioChannels[chnl][1]-6)/-66)*guiElements.aMixers[mixer].vol_bar.offsetHeight)+'px';
+        }
         
     } else {
-        guiElements.aMixers[0].volume.style.top = (((atemStatus.audioChannels[0][1]-6)/-66)*guiElements.aMixers[0].vol_bar.offsetHeight)+'px';
+        // Update master fader position (except if the user is interacting with the master volume fader)
+        if(volFaderMouseDown!=(0)){
+            guiElements.aMixers[0].volume.style.top = (((atemStatus.audioChannels[0][1]-6)/-66)*guiElements.aMixers[0].vol_bar.offsetHeight)+'px';
+        }
     }
     
 }
