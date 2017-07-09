@@ -85,13 +85,13 @@ function main(){
 
 function publish(){
     
-    socket.emit('getRecordingList');
-    
     guiElements.main.style.display = "none";
     guiElements.publish.style.display = "block";
     
     enableALvls = 0;
     atemALvl = {audioLevels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]};
+    
+    socket.emit('getRecordingList');
     
 }
 
