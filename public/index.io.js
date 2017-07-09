@@ -213,9 +213,11 @@ function preventLongPressMenu(node) {
     node.ontouchcancel = absorbEvent_;
 }
 
+/* OLD VOLUME FUNCTION *
 function setAtemAudioVolume(mixer){
     socket.emit('setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:guiElements.aMixers[mixer].volume.value});
 }
+*/
 
 function volInitChange(ev, mixer){
     volFaderMouseDown = mixer;
@@ -231,10 +233,16 @@ function volChange(ev, mixer){
     
     guiElements.aMixers[mixer].volume.style.top = (ev.offsetY-(guiElements.aMixers[mixer].volume.offsetHeight/2))+'px';
     
-    var vol = Math.round(6-((ev.offsetY/(guiElements.aMixers[mixer].vol_bar.offsetHeight))*67));
+    var faderPosPercent = ev.offsetY/(guiElements.aMixers[mixer].vol_bar.offsetHeight);
+    var linScaledPercent = 0.24-(faderPosPercent*1.25); // Gives a value from +0.24 to -1
+    var logScaledVol = 60*Math.pow(Math.abs(linScaledPercent),1.6); // Scales this to an abs value for the range between +6 and -60dB
+    if(linScaledPercent<0){
+        logScaledVol *= -1; // Flips a scaled volume back to negative if it was a negative percent
+    }
+    //var linerVol = Math.round(6-(faderPosPercent*67));
 
-    socket.emit('setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:vol});
-    console.log('Mixer '+mixer+': '+vol);
+    socket.emit('setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:logScaledVol});
+    console.log('Mixer '+mixer+': '+logScaledVol);
     lastMouse = ev;
 }
 
@@ -265,23 +273,23 @@ function volInitChange_4(ev){
 }
 
 function volChange_Master(ev){
-    volChange(ev,0)
+    volChange(ev,0);
 }
 
 function volChange_1(ev){
-    volChange(ev,1)
+    volChange(ev,1);
 }
 
 function volChange_2(ev){
-    volChange(ev,2)
+    volChange(ev,2);
 }
 
 function volChange_3(ev){
-    volChange(ev,3)
+    volChange(ev,3);
 }
 
 function volChange_4(ev){
-    volChange(ev,4)
+    volChange(ev,4);
 }
 
 function runAtemAudioPreset(preset){
@@ -510,13 +518,36 @@ function guiAudioChannel(mixer){
         
         // Update mixer fader position (except if the user is interacting with the volume fader for this mixer)
         if(volFaderMouseDown!=(mixer)){
-            guiElements.aMixers[mixer].volume.style.top = (((atemStatus.audioChannels[chnl][1]-6)/-66)*guiElements.aMixers[mixer].vol_bar.offsetHeight)+'px';
+            
+            var linScaledPercent = Math.pow(Math.abs(atemStatus.audioChannels[chnl][1]/60),0.625); // Gives a value from +0.24 to -1
+            if(atemStatus.audioChannels[chnl][1]<0){
+                linScaledPercent *= -1; // Flips a volume percent back to negative if it was from a negative value
+            }
+            var faderPosPercent = (linScaledPercent-0.24)*-0.8; 
+            
+            guiElements.aMixers[mixer].volume.style.top = (faderPosPercent*guiElements.aMixers[mixer].vol_bar.offsetHeight)+'px';
+            
+            //var linerVol = Math.round(6-(faderPosPercent*67));
+            
+            //guiElements.aMixers[mixer].volume.style.top = (((atemStatus.audioChannels[chnl][1]-6)/-66)*guiElements.aMixers[mixer].vol_bar.offsetHeight)+'px';
         }
         
     } else {
         // Update master fader position (except if the user is interacting with the master volume fader)
         if(volFaderMouseDown!=(0)){
-            guiElements.aMixers[0].volume.style.top = (((atemStatus.audioChannels[0][1]-6)/-66)*guiElements.aMixers[0].vol_bar.offsetHeight)+'px';
+            
+            var linScaledPercent = Math.pow(Math.abs(atemStatus.audioChannels[0][1]/60),0.625); // Gives a value from +0.24 to -1
+            if(atemStatus.audioChannels[0][1]<0){
+                linScaledPercent *= -1; // Flips a volume percent back to negative if it was from a negative value
+            }
+            var faderPosPercent = (linScaledPercent-0.24)*-0.8; 
+            
+            guiElements.aMixers[0].volume.style.top = (faderPosPercent*guiElements.aMixers[0].vol_bar.offsetHeight)+'px';
+            
+            //var linerVol = Math.round(6-(faderPosPercent*67));
+            
+            //guiElements.aMixers[0].volume.style.top = (((atemStatus.audioChannels[0][1]-6)/-66)*guiElements.aMixers[0].vol_bar.offsetHeight)+'px';
+            
         }
     }
     
@@ -550,11 +581,22 @@ function guiAudioLevel(mixer){
         }
         
         //Set level
-        guiElements.aMixers[mixer].level[0].style = "height:"+(atemALvl.audioLevels[chnl][0]*-1.1)+"%;";
-        guiElements.aMixers[mixer].level[1].style = "height:"+(atemALvl.audioLevels[chnl][1]*-1.1)+"%;";
+        var linScaledPercentL = Math.pow(Math.abs(atemALvl.audioLevels[chnl][0]/60),0.625);
+        var linScaledPercentR = Math.pow(Math.abs(atemALvl.audioLevels[chnl][1]/60),0.625);
+        guiElements.aMixers[mixer].level[0].style = "height:"+(linScaledPercentL*80)+"%;";
+        guiElements.aMixers[mixer].level[1].style = "height:"+(linScaledPercentR*80)+"%;";
+        
+        //guiElements.aMixers[mixer].level[0].style = "height:"+(atemALvl.audioLevels[chnl][0]*-1.1)+"%;";
+        //guiElements.aMixers[mixer].level[1].style = "height:"+(atemALvl.audioLevels[chnl][1]*-1.1)+"%;";
     } else if (mixer==0){
-        guiElements.aMixers[0].level[0].style = "height:"+(atemALvl.audioLevels[0][0]*-1.1)+"%;";
-        guiElements.aMixers[0].level[1].style = "height:"+(atemALvl.audioLevels[0][1]*-1.1)+"%;";
+        
+        var linScaledPercentL = Math.pow(Math.abs(atemALvl.audioLevels[0][0]/60),0.625);
+        var linScaledPercentR = Math.pow(Math.abs(atemALvl.audioLevels[0][1]/60),0.625);
+        guiElements.aMixers[0].level[0].style = "height:"+(linScaledPercentL*80)+"%;";
+        guiElements.aMixers[0].level[1].style = "height:"+(linScaledPercentR*80)+"%;";
+        
+        //guiElements.aMixers[0].level[0].style = "height:"+(atemALvl.audioLevels[0][0]*-1.1)+"%;";
+        //guiElements.aMixers[0].level[1].style = "height:"+(atemALvl.audioLevels[0][1]*-1.1)+"%;";
     }
     
 }
