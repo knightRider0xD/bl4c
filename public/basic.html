@@ -19,7 +19,7 @@
     <div class="row">
         <div class="col-md-3 col-sm-3">
             <div class="row">
-                <p style="font-size:1.2em; margin: 5px 0 0 0;">CAMERA SEL &amp; PRESETS</p>
+                <p style="font-size:1.2em; margin: 5px 0 0 0;">CAMERA PRESETS &amp; PTZ</p>
                 <ul class="nav nav-pills nav-pills nav-justified nav-lg">
                     <li role="presentation" class="ptzCamTab active"><a href="#" onclick="guiPTZCameraSwitcher(1);return false;">CAM 1</a></li>
                     <li role="presentation" class="ptzCamTab"><a href="#" onclick="guiPTZCameraSwitcher(2);return false;">CAM 2</a></li>
@@ -35,85 +35,40 @@
             </div>
             <hr style="margin:2px;"/>
             <div class="row">
-                <p style="font-size:1.2em; margin: 5px 0 0 0;">MIXER PRESETS</p>
-                <button type="button" class="col-md-6 col-sm-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(0)" style="padding-left:4px; padding-right:4px;">Muted</button>
-                <button type="button" class="col-md-6 col-sm-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(1)" style="padding-left:4px; padding-right:4px;">Talking</button>
-                <button type="button" class="col-md-6 col-sm-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(2)" style="padding-left:4px; padding-right:4px;">Band</button>
-                <button type="button" class="col-md-6 col-sm-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(3)" style="padding-left:4px; padding-right:4px;">Mics</button>
+                <div id="ptzBoundBox" class="alert-success col-md-9 col-sm-9" style="height:148px; padding:0;">
+                    <div id="ptzHitarea" class="alert btn-primary" style="position: relative; width:40px; height:40px;"></div>
+                </div>
+                <div class="col-md-3 col-sm-3">
+                    <p style="font-size:1.2em;">ZOOM</p>
+                    <div><button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="ptzZoom()" style="padding-left:4px; padding-right:4px;">+</button></div>
+                    <div><button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="ptzZoom()" style="padding-left:4px; padding-right:4px;">-</button></div>
+                </div>
             </div>
+            
             <hr style="margin:2px;"/>
             <div class="row">
                 <p style="font-size:1.2em; margin: 5px 0 0 0;">LIVE (PROGRAM)</p>
             </div>
         </div>
         
-        <div class="col-md-9 col-sm-9 hidden-xs">
-            <div class="row"><div class="col-md-11 col-sm-11" style="padding:0;">
-                <ul class="nav nav-pills nav-pills-info nav-justified nav-lg">
-                    <li role="presentation" class="indexTab active"><a href="#" onclick="guiMainPageSwitcher(0);return false;">V&nbsp;Switch</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(1);return false;">A&nbsp;Mixer</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(2);return false;">Cam&nbsp;PTZ</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(3);return false;">M&nbsp;Player</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(4);return false;">Rec/Out</a></li>
-                </ul>
+        <div class="col-md-6 col-sm-6">
+            
+            <div class="row">
+                <div class="col-md-3 col-sm-3">
+                    <p style="font-size:1.2em; margin: 5px 0 0 0;">MIXER PRESETS</p>
+                    <button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="runAtemAudioPreset(0)" style="padding-left:4px; padding-right:4px;">Muted</button>
+                    <button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="runAtemAudioPreset(1)" style="padding-left:4px; padding-right:4px;">Talking</button>
+                    <button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="runAtemAudioPreset(2)" style="padding-left:4px; padding-right:4px;">Band</button>
+                    <button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="runAtemAudioPreset(3)" style="padding-left:4px; padding-right:4px;">Mics</button>
                 </div>
-                <button type="button" class="col-md-1 col-sm-1 btn btn-lg btn-default" style="padding-left:4px; padding-right:4px;"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span></button>
-            </div>
-            
-            
-            <div class="row indexPage" style="">
-                <div class="col-md-12 col-sm-12">
-                <div class="row"><div class="col-md-12 col-sm-12">
-                    <p style="font-size:1.2em; margin: 5px 0 0 0;">AUTOMATIC PROGRAM TRANSITION <span style="color:LightGrey;">(RESETS ON PAGE REFRESH)</span></p>
-                    <ul class="nav nav-pills nav-pills">
-                        <li role="presentation" class="transStyle"><a href="#" onclick="guiAutoTransSwitcher('none');return false;">DISABLED</a></li>
-                        <li role="presentation" class="transStyle"><a href="#" onclick="guiAutoTransSwitcher('cut');return false;">&nbsp;CUT&nbsp;</a></li>
-                        <li role="presentation" class="transStyle active" style="height:20px;"><a href="#" onclick="guiAutoTransSwitcher('mix');return false;">&nbsp;FADE&nbsp;<input type="number" id="transLength" name="transLength" min="0.0" max="10.0" step="0.1" value="0.6" style="width:72px; color:#000;" onchange="setAtemTransLength()"/>secs</a>&nbsp;</li>
-                    </ul>
-                </div></div>
-                <hr style="margin: 8px 2px 2px 2px;">
-                <div class="row"><div class="col-md-12 col-sm-12">
-                    <p style="font-size:1.2em; margin: 5px 0 0 0;">PREVIEW</p>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(0)">BLACK</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-success" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(1)">PC</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(2)">VREC</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(3)">DESK</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(4)">-</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(5)">PTZ1</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(6)">PTZ2</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(7)">CONV</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(8)">-</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(2001)">CLR1</button>
-                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(2002)">CLR2</button>
-                </div></div>
-                <hr style="margin:2px;">
-                <div class="row"><div class="col-md-12 col-sm-12">
-                    <p style="font-size:1.2em; margin: 5px 0 0 0;">PROJECTOR (AUX)</p>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(0)">BLACK</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-warning" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(1)">PC</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(2)">VREC</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(3)">DESK</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(4)">-</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(5)">PTZ1</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(6)">PTZ2</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(7)">CONV</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(8)">-</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(2001)">CLR1</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(2002)">CLR2</button>
-                    <button type="button" class="auxBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(10010)">PROG</button>
-                </div></div>
-                </div>
-            </div>
-            
-            
-            <div class="row indexPage" style="display:none;">
-                <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
+                <div class="col-md-3 col-sm-3" style="padding-left:4px; padding-right:4px;">
+                    <p style="font-size:1.2em; margin: 5px 0 0 0;">MIXERS</p>
+                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:45%; overflow:hidden; text-align:center; z-index:2;">
                         <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
                         <div id="aMixerCh1Volume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
                         <div id="aMixerCh1VolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
                     </div>
-                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
+                    <div style="box-sizing: border-box; display: inline-block; width: 50%;">
                         <button id="aMixerCh1Mute" type="button" class="btn btn-tall btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
                         <div class="volume-bar">
                             <div class="aMixerCh1Ref   volume-bar-normal"></div>
@@ -130,7 +85,7 @@
                     </div>
                     <br>
                     <select id="aMixerCh1Name" class="form-control" style="width:100%; padding-left:4px; padding-right:4px;" onchange="guiAudioChannel(1)">
-                        <option value="1" selected="True">Input 1</option>
+                        <option value="1">Input 1</option>
                         <option value="2">Input 2</option>
                         <option value="3">Input 3</option>
                         <option value="4">Input 4</option>
@@ -138,17 +93,18 @@
                         <option value="6">Input 6</option>
                         <option value="7">Input 7</option>
                         <option value="8">Input 8</option>
-                        <option value="1201">RCA</option>
-                        <option value="1001">XLR</option>
+                        <option value="1201" selected="True">MIXER A</option>
+                        <option value="1001">MICS</option>
                     </select>
                 </div>
-                <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
+                <div class="col-md-3 col-sm-3" style="padding-left:4px; padding-right:4px;">
+                    <p style="font-size:1.2em; margin: 5px 0 0 0;">&nbsp;</p>
+                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:45%; overflow:hidden; text-align:center; z-index:2;">
                         <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
                         <div id="aMixerCh2Volume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
                         <div id="aMixerCh2VolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
                     </div>
-                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
+                    <div style="box-sizing: border-box; display: inline-block; width: 50%;">
                     <button id="aMixerCh2Mute" type="button" class="btn btn-tall btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
                         <div class="volume-bar">
                             <div class="aMixerCh2Ref   volume-bar-normal"></div>
@@ -173,87 +129,18 @@
                         <option value="6">Input 6</option>
                         <option value="7">Input 7</option>
                         <option value="8">Input 8</option>
-                        <option value="1201">RCA</option>
-                        <option value="1001">XLR</option>
+                        <option value="1201">MIXER A</option>
+                        <option value="1001" selected="True">MICS</option>
                     </select>
                 </div>
-                <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
-                        <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
-                        <div id="aMixerCh3Volume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
-                        <div id="aMixerCh3VolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
-                    </div>
-                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
-                        <button id="aMixerCh3Mute" type="button" class="btn btn-tall btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
-                        <div class="volume-bar">
-                            <div class="aMixerCh3Ref   volume-bar-normal"></div>
-                            <div class="aMixerCh3Ref   volume-bar-high"></div>
-                            <div class="aMixerCh3Ref   volume-bar-over"></div>
-                            <div class="aMixerCh3Level volume-lvl"></div>
-                        </div>
-                        <div class="volume-bar">
-                            <div class="aMixerCh3Ref   volume-bar-normal"></div>
-                            <div class="aMixerCh3Ref   volume-bar-high"></div>
-                            <div class="aMixerCh3Ref   volume-bar-over"></div>
-                            <div class="aMixerCh3Level volume-lvl"></div>
-                        </div>
-                    </div>
-                    <br>
-                    <select id="aMixerCh3Name" class="form-control" style="width:100%; padding-left:4px; padding-right:4px;" onchange="guiAudioChannel(3)">
-                        <option value="1">Input 1</option>
-                        <option value="2">Input 2</option>
-                        <option value="3">Input 3</option>
-                        <option value="4">Input 4</option>
-                        <option value="5">Input 5</option>
-                        <option value="6">Input 6</option>
-                        <option value="7">Input 7</option>
-                        <option value="8">Input 8</option>
-                        <option value="1201" selected="True">RCA</option>
-                        <option value="1001">XLR</option>
-                    </select>
-                </div>
-                <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
-                        <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
-                        <div id="aMixerCh4Volume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
-                        <div id="aMixerCh4VolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
-                    </div>
-                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
-                        <button id="aMixerCh4Mute" type="button" class="btn btn-tall btn-default" onclick="setAtemAudioMute(2)" style="width:100%; padding-left:4px; padding-right:4px;">MUTED</button>
-                        <div class="volume-bar">
-                            <div class="aMixerCh4Ref   volume-bar-normal"></div>
-                            <div class="aMixerCh4Ref   volume-bar-high"></div>
-                            <div class="aMixerCh4Ref   volume-bar-over"></div>
-                            <div class="aMixerCh4Level volume-lvl"></div>
-                        </div>
-                        <div class="volume-bar">
-                            <div class="aMixerCh4Ref   volume-bar-normal"></div>
-                            <div class="aMixerCh4Ref   volume-bar-high"></div>
-                            <div class="aMixerCh4Ref   volume-bar-over"></div>
-                            <div class="aMixerCh4Level volume-lvl"></div>
-                        </div>
-                    </div>
-                    <br>
-                    <select id="aMixerCh4Name" class="form-control" style="width:100%; padding-left:4px; padding-right:4px;" onchange="guiAudioChannel(4)">
-                        <option value="1">Input 1</option>
-                        <option value="2">Input 2</option>
-                        <option value="3">Input 3</option>
-                        <option value="4">Input 4</option>
-                        <option value="5">Input 5</option>
-                        <option value="6">Input 6</option>
-                        <option value="7">Input 7</option>
-                        <option value="8">Input 8</option>
-                        <option value="1201">RCA</option>
-                        <option value="1001" selected="True">XLR</option>
-                    </select>
-                </div>
-                <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
-                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:55%; overflow:hidden; text-align:center; z-index:2;">
+                <div class="col-md-3 col-sm-3" style="padding-left:4px; padding-right:4px;">
+                    <p style="font-size:1.2em; margin: 5px 0 0 0;">&nbsp;</p>
+                    <div style="box-sizing: border-box; position: relative; display: inline-block; height:332px; width:45%; overflow:hidden; text-align:center; z-index:2;">
                         <div style="box-sizing: border-box; position: absolute; top: 1%; height:98%; width:2px;background-color: grey; left: 50%;"></div>
                         <div id="aMixerMasterVolume" class="btn-primary" style="box-sizing: border-box; position: absolute; height:20px; width:100%;"></div>
                         <div id="aMixerMasterVolBar" style="box-sizing: border-box; position: absolute; top: 0; left: 0; display: inline-block; height:100%; width:100%; padding: 0; margin: 0; background:none;"></div>
                     </div>
-                    <div  style="box-sizing: border-box; display: inline-block; width: 40%;">
+                    <div style="box-sizing: border-box; display: inline-block; width: 50%;">
                         <div style="width:1px; height:56px;"></div>
                         <div class="volume-bar">
                             <div class="aMixerMasterRef   volume-bar-normal"></div>
@@ -273,33 +160,28 @@
                 </div>
             </div>
             
+        </div>
+        
+        
+        <div class="col-md-3 col-sm-3">
             
-            <div class="row indexPage" style="display:none;">
-                <div id="ptzBoundBox" class="alert-success col-md-11 col-sm-11" style="height:392px; padding:0;">
-                    <div id="ptzHitarea" class="alert btn-primary" style="position: relative; width:60px; height:60px;"></div>
-                </div>
-                <div class="col-md-1 col-sm-1">
-                    <p style="font-size:1.2em;">TELE</p>
-                    <div style="display: inline-block; height:320px; width:100%; overflow:hidden; text-align:center;"><input id="ptzZoom" type="range" min="-7" max="7" oninput="ptzZoom()" onchange="ptzReset()" style="transform: rotate(-90deg); position: relative; top: 0; left: -160px; height: 100%; width: 356px;"></input></div>
-                    <p style="font-size:1.2em;">WIDE</p>
-                </div>
+            <div class="row">
+                <p style="font-size:1.2em; margin: 5px 0 0 0;">RECORDING</p>
+                <button type="button" id="recordBtn" class="col-md-6 col-sm-6 btn btn-lg btn-default" style="padding-left:4px; padding-right:4px;" onclick="record()">RECORD</button>
+                <button type="button" class="col-md-6 col-sm-6 btn btn-lg btn-default" style="padding-left:4px; padding-right:4px;"><span class="glyphicon glyphicon-cog" aria-hidden="true" style="font-size:0.8em;"></span></button>
+                <button type="button" id="stopBtn" class="col-md-6 col-sm-6 btn btn-lg btn-default" style="padding-left:4px; padding-right:4px;" onclick="stopRecord()">STOP</button>
+                <button type="button" id="publishBtn" class="col-md-6 col-sm-6 btn btn-lg btn-default" style="padding-left:4px; padding-right:4px;" onclick="publish()">PUBLISH</button>
             </div>
-                
             
-            <div class="row indexPage" style="display: none;">
-                <br>
-                <div class="col-md-4 col-sm-4">
-                    <row>
-                        <p style="font-size:1.2em;">&nbsp;</p>
-                        <button type="button" id="mediaPlay" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="playMedia()"><span class="glyphicon glyphicon-play" aria-hidden="true"></span>&nbsp;PLAY FROM START</button>
-                        <button type="button" id="mediaPause" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="pauseMedia()" disabled="True"><span class="glyphicon glyphicon-pause" aria-hidden="true"></span>&nbsp;PAUSE PLAYBACK&nbsp;</button>
-                        <button type="button" id="mediaStop" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="stopMedia()"><span class="glyphicon glyphicon-stop" aria-hidden="true"></span>&nbsp;STOP PLAYBACK&nbsp;&nbsp;&nbsp;</button>
-                    </row>
-                </div>
+            <div class="row">
+                <p style="font-size:1.2em; margin: 5px 0 0 0;">MEDIA PLAYER</p>
+                    
+                <button type="button" id="mediaPlay" class="col-md-4 col-sm-4 btn btn-tall btn-default" onclick="playMedia()"><span class="glyphicon glyphicon-play" aria-hidden="true"></span>&nbsp;BEGIN</button>
+                <button type="button" id="mediaPause" class="col-md-4 col-sm-4 btn btn-tall btn-default" onclick="pauseMedia()" disabled="True"><span class="glyphicon glyphicon-pause" aria-hidden="true"></span>&nbsp;PAUSE&nbsp;</button>
+                <button type="button" id="mediaStop" class="col-md-4 col-sm-4 btn btn-tall btn-default" onclick="stopMedia()"><span class="glyphicon glyphicon-stop" aria-hidden="true"></span>&nbsp;STOP&nbsp;&nbsp;&nbsp;</button>
 
-                <div class="col-md-8 col-sm-8">
-                    <row>
-                        <p style="font-size:1.2em; margin: 5px 0 0 0;">MEDIA</p>
+                <div class="col-md-7 col-sm-7">
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">SOURCE</p>
                         <select id="mediaSelect" class="form-control">
                             <option>SELECT ...</option>
                             <option disabled="disabled"></option>
@@ -311,45 +193,28 @@
                             <option value="cdda">AUDIO CD</option>
                             <option disabled="disabled"></option>
                         </select>
-                    </row>
-                    <hr style="margin:2px;"/>
-                    <row>
-                        <p style="font-size:1.2em; margin: 5px 0 0 0;">TITLE/TRACK</p>
+                </div>
+                <div class="col-md-5 col-sm-5">
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">CHAPTER</p>
                         <input type="number" id="mediaTitle" min="0" step="1" value="0" class="form-control" placeholder="Title/Track #" />
-                    </row>
+                </div>
                     <hr style="margin:2px;"/>
-                    <row>
-                        <p style="font-size:1.2em; margin: 5px 0 0 0;">START POSITION</p>
-                        <div class="col-md-4 col-sm-4"><div class="row"><input type="number" id="mediaStartPosM" min="0" step="1" value="0" class="form-control" /></div></div>
-                        <div class="col-md-1 col-sm-1">MIN&nbsp;</div>
-                        <div class="col-md-4 col-sm-4"><div class="row"><input type="number" id="mediaStartPosS" min="0" step="1" value="0" class="form-control" /></div></div>
-                        <div class="col-md-1 col-sm-1">SECS</div>
-                    </row>
+                    
                 </div>
-            </div>
             
             
-
-            <div class="row indexPage" style="display:none;">
-                <br>
-                <div class="col-md-6 col-sm-6">
-                    <button type="button" id="recordBtn" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="record()" style="padding-left:4px; padding-right:4px;">RECORD</button>
-                    <button type="button" id="stopBtn" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="stopRecord()" style="padding-left:4px; padding-right:4px;">STOP</button>
-                    <p>&nbsp;</p>
-                    <div class="panel panel-info">
-                        <div class="panel-heading">
-                            <h3 class="panel-title">Recording Status</h3>
-                        </div>
-                        <div class="panel-body">
-                            <p id="recordStatusLbl"><b>Not Recording</b></p>
-                            <hr />
-                            <p id="recordSpaceLbl"><b>Recording Space:</b> Loading...</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6 col-sm-6">
-                    <button type="button" id="publishBtn" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="publish()" style="padding-left:4px; padding-right:4px;">PUBLISH</button>
-                </div>
+            <div class="row">
+                
+                <hr style="margin: 8px 2px 2px 2px;">
+                <p style="font-size:1.2em; margin: 5px 0 0 0;">PROJECTOR (AUX)</p>
+                <div class="row"><div class="col-md-12 col-sm-12">
+                    <button type="button" class="auxBtn col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-radio btn-warning" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(1)">PC</button>
+                    <button type="button" class="auxBtn col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(10010)">VIDEO</button>
+                </div></div>
+                <div class="row"><div class="col-md-12 col-sm-12">
+                    <button type="button" class="auxBtn col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(0)">BLACK</button>
+                    <button type="button" class="auxBtn col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-radio btn-aux" style="padding-left:4px; padding-right:4px;" onclick="setAtemAux(3010)">IMAGE</button>
+                </div></div>
             </div>
             
             
@@ -363,16 +228,16 @@
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-danger" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(1)">PC</button>
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(2)">VREC</button>
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(3)">DESK</button>
-            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(4)">-</button>
+            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(4)">HDMI4</button>
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(5)">PTZ1</button>
         </div>
         <div class="col-md-6 col-sm-6 col-xs-12" style="padding:0">
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(6)">PTZ2</button>
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(7)">CONV</button>
-            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(8)">-</button>
-            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(2001)">CLR1</button>
-            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(2002)">CLR2</button>
-            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" disabled="true">MUTE</button>
+            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(8)">SDI8</button>
+            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(2001)">WHITE</button>
+            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(3010)">IMAGE</button>
+            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" disabled="true">KEYER</button>
         </div>
     </div>
 

@@ -9,11 +9,6 @@ var atemStatus = {program:0,preview:0,aux:0,ftb:0,transLength:0.6,audioChannels:
 var enableALvls = 0;
 var transStyle = '';
 var atemALvl = {audioLevels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]};
-
-var atemALvlPresets = [ {audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]},
-                        {audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[1,-8],[0,0],[0,0]]},
-                        {audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[1,-15],[0,0],[0,0]]},
-                        {audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[1,-15],[0,0],[1,-15],[0,0],[0,0]]} ];
                         
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
 var mplayerStatus = {connected:0,playing:0};
@@ -28,11 +23,11 @@ guiElements = {
     prevBtns:[],
     auxBtns:[],
     transLengthNumeric:0,
-    aMixers:[{name:"master",channel:0,mute:1,volume:0,level:[],ref:[]},
-    {name:"ch1",channel:1,mute:1,volume:0,level:[],ref:[]},
+    aMixers:[{name:"master",channel:0,mute:1,volume:0,vol_bar:0,level:[],ref:[]},
+    {name:"ch1",channel:1,mute:1,volume:0,vol_bar:0,level:[],ref:[]},
     {name:"ch2",channel:2,mute:1,volume:0,vol_bar:0,level:[],ref:[]},
-    {name:"ch3",channel:3,mute:1,volume:0,level:[],ref:[]},
-    {name:"ch4",channel:4,mute:1,volume:0,level:[],ref:[]}],
+    {name:"ch3",channel:3,mute:1,volume:0,vol_bar:0,level:[],ref:[]},
+    {name:"ch4",channel:4,mute:1,volume:0,vol_bar:0,level:[],ref:[]}],
     recordBtn:0,
     stopBtn:0,
     publishBtn:0,
@@ -91,7 +86,7 @@ function publish(){
     enableALvls = 0;
     atemALvl = {audioLevels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]};
     
-    socket.emit('getRecordingList');
+    socket.emit('getFileList');
     
 }
 
@@ -103,12 +98,9 @@ function onAtemUpdate(status){
     guiPreviewSwitcher(); //set preview
     guiAuxSwitcher(); //set aux
     guiTransLength(); //set translength
-    guiAudioChannel(0); //set audio master
-    guiAudioChannel(1); //set audio mixer1
-    guiAudioChannel(2); //set audio mixer2
-    guiAudioChannel(3); //set audio mixer3
-    guiAudioChannel(4); //set audio mixer4
-    
+    for (var i = 0; i < guiElements.aMixers.length; i++) {
+        guiAudioChannel(i); // Update audio mixer volumes for each mixer
+    }
 }
 
 
@@ -117,11 +109,9 @@ function onAtemAudioLevel(levels){
     if(enableALvls) {
         atemALvl = levels;
         
-        guiAudioLevel(0); //set audio master
-        guiAudioLevel(1); //set audio mixer1
-        guiAudioLevel(2); //set audio mixer2
-        guiAudioLevel(3); //set audio mixer3
-        guiAudioLevel(4); //set audio mixer4
+        for (var i = 0; i < guiElements.aMixers.length; i++) {
+            guiAudioLevel(i); // Update audio mixer levels for each mixer
+        }
     }
 }
 
@@ -152,22 +142,24 @@ function onPublisherUpdate(status){
 
 
 function setAtemProgram(input){
-    socket.emit('changeProgram', {input:input,trans:transStyle});
+    socket.emit('atem_changeProgram', {input:input,trans:transStyle});
 }
 
 function setAtemPreview(input){
-    socket.emit('setPreview', input);
+    socket.emit('atem_setPreview', input);
 }
 
 function setAtemAux(input){
-    socket.emit('setAux', input);
+    socket.emit('atem_setAux', input);
 }
 
 function setAtemTransLength(){
-    socket.emit('setTransLength', guiElements.transLengthNumeric.value);
+    socket.emit('atem_setTransLength', guiElements.transLengthNumeric.value/1000);
 }
 
-function setAtemTransition(){}
+function setAtemTransition(){
+    
+}
 
 
 function setAtemAudioMute(mixer){
@@ -193,7 +185,7 @@ function setAtemAudioMute(mixer){
         }
     }
     
-    socket.emit('setAudioMute', {channel:guiElements.aMixers[mixer].channel,mute:(atemStatus.audioChannels[chnl][0]+1)%2});
+    socket.emit('atem_setAudioMute', {channel:guiElements.aMixers[mixer].channel,mute:(atemStatus.audioChannels[chnl][0]+1)%2});
 }
 
 /////////////////////////////////////////////
@@ -215,7 +207,7 @@ function preventLongPressMenu(node) {
 
 /* OLD VOLUME FUNCTION *
 function setAtemAudioVolume(mixer){
-    socket.emit('setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:guiElements.aMixers[mixer].volume.value});
+    socket.emit('atem_setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:guiElements.aMixers[mixer].volume.value});
 }
 */
 
@@ -241,7 +233,7 @@ function volChange(ev, mixer){
     }
     //var linerVol = Math.round(6-(faderPosPercent*67));
 
-    socket.emit('setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:logScaledVol});
+    socket.emit('atem_setAudioVolume', {channel:guiElements.aMixers[mixer].channel,volume:logScaledVol});
     console.log('Mixer '+mixer+': '+logScaledVol);
     lastMouse = ev;
 }
@@ -293,7 +285,7 @@ function volChange_4(ev){
 }
 
 function runAtemAudioPreset(preset){
-    socket.emit('runAudioPreset', atemALvlPresets[preset]);
+    socket.emit('atem_runAudioPreset', preset);
 }
 
 function record(){
@@ -682,7 +674,7 @@ function ptzReset(){
     guiElements.ptzZoomLvl.value = 0;
     guiElements.ptzHitarea.style.left = ((guiElements.ptzBoundBox.clientWidth/2) - 30) + 'px';
     guiElements.ptzHitarea.style.top  = ((guiElements.ptzBoundBox.clientHeight/2) - 30) + 'px';
-    socket.emit('sendPtzCmd', {camera:ptz.camera,pan:0,tilt:0,zoom:0});
+    socket.emit('visca_sendPtzCmd', {camera:ptz.camera,pan:0,tilt:0,zoom:0});
     console.log('PTZ reset');
     
 }
@@ -693,7 +685,7 @@ function ptzZoom(){
 
     if(zoom!=ptz.zoom){
         ptz.zoom = zoom;
-        socket.emit('sendPtzCmd', {camera:ptz.camera,
+        socket.emit('visca_sendPtzCmd', {camera:ptz.camera,
                                     pan:0,
                                     tilt:0,
                                     zoom:ptz.zoom});
@@ -725,7 +717,7 @@ function ptzPan(ev){
         ptz.pan = pan;
         ptz.tilt = tilt;
 
-        socket.emit('sendPtzCmd', {camera:ptz.camera,
+        socket.emit('visca_sendPtzCmd', {camera:ptz.camera,
                                     pan:ptz.pan,
                                     tilt:ptz.tilt,
                                     zoom:0});
@@ -739,14 +731,14 @@ function ptzPan(ev){
 }
 
 function ptzRecallPreset(preset){
-    socket.emit('sendPtzRecall', {camera:ptz.camera,
+    socket.emit('visca_sendPtzRecall', {camera:ptz.camera,
                                 slot:preset});
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-function onRecordingList(list){
+function onFileList(list){
     
     // Clear list
     while (sourceFileList.options.length>0) {
@@ -893,12 +885,12 @@ function connectServer(){
 
     //connect socket events
     socket.on("connect", function () {console.log("Connected!");});
-    socket.on("atemUpdate", function (status) {onAtemUpdate(status);});
-    socket.on("atemALvls", function (levels) {onAtemAudioLevel(levels);});
-    socket.on("recorderUpdate", function (status) {onRecorderUpdate(status);});
+    socket.on("atem_update", function (status) {onAtemUpdate(status);});
+    socket.on("atem_alvls", function (levels) {onAtemAudioLevel(levels);});
+    socket.on("recorder_update", function (status) {onRecorderUpdate(status);});
     socket.on("mplayerUpdate", function (status) {onMplayerUpdate(status);});
-    socket.on("publisherUpdate", function (status) {onPublisherUpdate(status);});
-    socket.on("recordingList", function (list) {console.log(list); onRecordingList(list);});
+    socket.on("publisher_update", function (status) {onPublisherUpdate(status);});
+    socket.on("publisher_fileList", function (list) {console.log(list); onFileList(list);});
 }
 
 /**

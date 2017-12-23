@@ -1,0 +1,46 @@
+===========
+  GENERAL
+===========
+
+Each folder in this directory should contain a main.js file that will be loaded by the plugin system.
+
+The name of that folder will be the module's name
+
+===========
+  MAIN.JS
+===========
+
+Each main.js file should contain an exported function load that will be run when the plugin is loaded and contains a reference to a PluginConnector object that provides methods to interact with the main system.
+
+exports.load = function (system) {}
+
+Each main.js file should also contain an exported function unload that will run any code needed to be done when unloading the plugin.
+
+exports.unload = function () {}
+
+And an exported function notify which will be called when any plugin calls system.sendNotice(signalName, value)
+
+exports.notify = function (signalName, value) {}
+
+=============================
+  USING THE PLUGINCONNECTOR
+=============================
+
+system.sendNotice(signalName, value); will send a notification to the main system and ALL plugins with name pluginName_signalName, and value value.
+
+system.registerSioEvent(eventName, callback); will register a Socket.IO on event with name pluginName_eventName to call function callback when signaled. If event name is 'connected', the event will be triggered when a Socket.IO connection is received. 
+
+system.doSioEmit(signalName, value); will emit a Socket.IO signal with name pluginName_signalName and value value.
+
+
+system.getConfig(); will retrieve an object containing this module's section of the system config or undefined if it does not exist. Recommend using setConfigDefaults first.
+
+system.getConfig(key); will retrieve a value for key key from this module's section of the system config or undefined if it does not exist. Recommend using setConfigDefaults first.
+
+system.setConfigDefaults(object); will set the defaults for this module's section of the system config.
+
+system.setConfig(key, value); will save a value for key key in this module's section of the system config.
+
+system.getGlobalConfig(); will retrieve an object containing the global section of the system config.
+
+system.getGlobalConfig(key); will retrieve a value for key key from the global section of the system config or undefined if it does not exist.
