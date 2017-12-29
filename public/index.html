@@ -15,7 +15,17 @@
 </head>
 <body onload="connectGui();connectServer();">
 
-<div id="main" class="container-fluid" style="z-index: 0;">
+<div id="menu" class="container-fluid" style="z-index: 0;">
+    <h1>Welcome to the Video System</h1>
+    <p>Choose from the options below to begin...</p>
+    <div class="row">
+        <button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="main()" style="padding-left:4px; padding-right:4px;">Main Controls</button>
+        <button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="publish()" style="padding-left:4px; padding-right:4px;">Publish</button>
+        <button type="button" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="settings()" style="padding-left:4px; padding-right:4px;">Settings</button>
+    </div>
+</div>
+
+<div id="main" class="container-fluid" style="z-index: 0; display:none;">
     <div class="row">
         <div class="col-md-3 col-sm-3">
             <div class="row">
@@ -57,7 +67,7 @@
                     <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(4);return false;">Rec/Out</a></li>
                 </ul>
                 </div>
-                <button type="button" class="col-md-1 col-sm-1 btn btn-lg btn-default" style="padding-left:4px; padding-right:4px;"><span class="glyphicon glyphicon-cog" aria-hidden="true"></span></button>
+                <button type="button" class="col-md-1 col-sm-1 btn btn-lg btn-default" style="padding-left:4px; padding-right:4px;" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
             </div>
             
             
@@ -85,6 +95,7 @@
                     <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(8)">SDI8</button>
                     <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(2001)">WHITE</button>
                     <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(3010)">IMAGE</button>
+                    <button type="button" class="prevBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prev" style="padding-left:4px; padding-right:4px;" onclick="setAtemPreview(5010)">KEYER</button>
                 </div></div>
                 <hr style="margin:2px;">
                 <div class="row"><div class="col-md-12 col-sm-12">
@@ -138,8 +149,8 @@
                         <option value="6">Input 6</option>
                         <option value="7">Input 7</option>
                         <option value="8">Input 8</option>
-                        <option value="1201">RCA</option>
-                        <option value="1001">XLR</option>
+                        <option value="1201">Mixer A (RCA)</option>
+                        <option value="1001">Mics (XLR)</option>
                     </select>
                 </div>
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
@@ -173,8 +184,8 @@
                         <option value="6">Input 6</option>
                         <option value="7">Input 7</option>
                         <option value="8">Input 8</option>
-                        <option value="1201">RCA</option>
-                        <option value="1001">XLR</option>
+                        <option value="1201">Mixer A (RCA)</option>
+                        <option value="1001">Mics (XLR)</option>
                     </select>
                 </div>
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
@@ -208,8 +219,8 @@
                         <option value="6">Input 6</option>
                         <option value="7">Input 7</option>
                         <option value="8">Input 8</option>
-                        <option value="1201" selected="True">RCA</option>
-                        <option value="1001">XLR</option>
+                        <option value="1201" selected="True">Mixer A (RCA)</option>
+                        <option value="1001">Mics (XLR)</option>
                     </select>
                 </div>
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
@@ -243,8 +254,8 @@
                         <option value="6">Input 6</option>
                         <option value="7">Input 7</option>
                         <option value="8">Input 8</option>
-                        <option value="1201">RCA</option>
-                        <option value="1001" selected="True">XLR</option>
+                        <option value="1201">Mixer A (RCA)</option>
+                        <option value="1001" selected="True">Mics (XLR)</option>
                     </select>
                 </div>
                 <div class="col-md-2 col-sm-2" style="padding-left:4px; padding-right:4px; width:20%;">
@@ -347,9 +358,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 col-sm-6">
-                    <button type="button" id="publishBtn" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="publish()" style="padding-left:4px; padding-right:4px;">PUBLISH</button>
-                </div>
             </div>
             
             
@@ -372,7 +380,7 @@
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(8)">SDI8</button>
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(2001)">WHITE</button>
             <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(3010)">IMAGE</button>
-            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" disabled="true">KEYER</button>
+            <button type="button" class="progBtn col-md-2 col-sm-2 col-xs-2 btn btn-lg btn-radio btn-prog" style="padding-left:4px; padding-right:4px;" onclick="setAtemProgram(5010)">KEYER</button>
         </div>
     </div>
 
@@ -382,12 +390,10 @@
 
 <div id="publish" class="container-fluid" style="z-index: 0; display: none;">
     <div class="row">
-        <div class="col-md-10 col-sm-10">
+        <div class="col-md-11 col-sm-11">
             <h2>Publish Recordings</h2>
         </div>
-        <div class="col-md-2 col-sm-2">
-            <button type="button" id="recordBtn" class="btn btn-lg btn-default" onclick="main()" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;">BACK</button>
-        </div>
+            <button type="button" id="recordBtn" class="col-md-1 col-sm-1 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
         
     </div>
     <hr style="margin:4px;" />
@@ -395,9 +401,9 @@
         <div class="col-md-4 col-sm-4">
             <h4>SOURCE FILES</h4>
             <row>
-                <select id="sourceFileList" multiple class="form-control" size="16">
-                    
-                </select>
+                <ul id="sourceFileList" class="list-group">
+                    <li class="list-group-item" style="padding:0"><button style="border:0;padding:4px 14px;background:none;float:right;font-size:1.6em;" onclick="copyToPublishList('test')"><span class="glyphicon glyphicon-plus"></span></button><div style="padding:10px;">TEST</div></li>
+                </ul>
             </row>
         </div>
         
@@ -413,23 +419,27 @@
         
             
             <div class="row">
-                <div class="col-md-3 col-sm-3">
-                    <div class="row">
-                        <button type="button" id="publishCopyBtn" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="copyToPublishList()" style="padding-left:4px; padding-right:4px;"><span class="glyphicon glyphicon-arrow-right" aria-hidden="true"></span></button>
-                    </div>
-                    <div class="row">
-                        <button type="button" id="publishDeleteBtn" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="deleteFromPublishList()" style="padding-left:4px; padding-right:4px;"><span class="glyphicon glyphicon-remove-circle" aria-hidden="true"></span></button>
-                    </div>
-                </div>
-                <div class="col-md-9 col-sm-9">
-                    <select id="publishFileList" multiple class="form-control" size="6">
+                <div class="col-md-12 col-sm-12">
+                    <h4>SELECTED FILES</h4>
+                    <ul id="publishFileList" class="list-group" style="min-height:100px">
                         
-                    </select>
+                    </ul>
                 </div>
             </div>
             <hr style="margin:4px;" />
 
             <div class="publishPage row">
+                <div>
+                    <div class="col-md-3 col-sm-3">
+                        <p>Select Disc Menu</p>
+                    </div>
+                    <div class="col-md-9 col-sm-9">
+                        <select id="discMenuList" class="form-control" style="width:100%">
+                            <option value="0">No Menu</option>
+                            <option value="menu01.mpg" selected="true">Main Logo Menu</option>
+                        </select>
+                    </div>
+                </div>
                 <div>
                     <div class="col-md-4 col-sm-4">
                         
@@ -546,6 +556,16 @@
         <div class="col-md-2 col-sm-2">
             <button type="button" id="cancelBtn" class="btn btn-lg btn-danger" onclick="cancelPublish()" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;">CANCEL</button>
         </div>
+        
+    </div>
+</div>
+
+<div id="settings" class="container-fluid" style="z-index: 0; display:none;">
+    <div class="row">
+        <div class="col-md-11 col-sm-11">
+            <h2>System Settings</h2>
+        </div>
+            <button type="button" id="recordBtn" class="col-md-1 col-sm-1 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
         
     </div>
 </div>

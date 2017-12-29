@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>BL4C - Main</title>
+  <meta charset="utf-8">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="bootstrap/jquery.min.js"></script>
+  <script src="socket.io/socket.io.js"></script>
+</head>
+<body>
+<script>
+/**
+ * Opens a socket.io connection back to the server
+ * requires socket.io client library to already be loaded
+ */
+function connectServer(){
+    //setup socket
+    socket = new io.connect( {
+        'reconnection': true,
+        'reconnectionDelay': 1000,
+        'reconnectionDelayMax' : 5000,
+    'reconnectionAttempts': Number.MAX_VALUE
+    });    
+
+    //connect socket events
+    socket.on("connect", function () {alert("Connected");});
+    socket.on("test_reply", function (reply) {alert(reply);});
+}
+
+function testEmit(){
+    socket.emit('test_sio');
+}
+
+function testChangeServerSetting(){
+    socket.emit('test_setting');
+}
+
+function testShowConfig(){
+    socket.emit('test_config');
+}
+
+</script>
+
+<button onclick="connectServer()">CONNECT</button><br />
+<button onclick="testEmit()">TEST EMIT</button><br />
+<button onclick="testChangeServerSetting()">TEST UPDATE SERVER SETTING</button><br />
+<button onclick="testShowConfig()">TEST SHOW SETTINGS</button><br />
+
+</body>
+</html>

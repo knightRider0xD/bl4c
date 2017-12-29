@@ -1,2 +1,5 @@
-atem 
+atem
+mediaplayer
+publisher
+recorder
 visca

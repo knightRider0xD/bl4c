@@ -1,2 +1,14 @@
-Requires executable binary 'visca-cli-multi'
+Requires following utilities:
+- cat
+- rm
+- mkdir
+- ffmpeg
+- dvdauthor
+- isoinfo
+- growisofs
+- mkisofs
+- curl
+- df
+- lsof
+- sync
  

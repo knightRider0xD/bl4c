@@ -35,13 +35,13 @@ exports.load = function (main_sys) {
 }
 
 exports.unload = function () {
-    quitVisca();
+    quitRecorder();
 }
 
 exports.notify = function (signalName, value) {
     //Update status if publishing
     if(signalName == "publisher_status"){
-        
+        publisherStatus = value;
     }
 }
 

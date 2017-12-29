@@ -16,7 +16,6 @@ var publisherStatus = {status:0,complete:0,lastDiscStatus:0,lastFileStatus:0};
 var volFaderMouseDown = 0;
 
 guiElements = {
-    main:0,
     mainPages:[],
     mainTabs:[],
     progBtns:[],
@@ -30,7 +29,6 @@ guiElements = {
     {name:"ch4",channel:4,mute:1,volume:0,vol_bar:0,level:[],ref:[]}],
     recordBtn:0,
     stopBtn:0,
-    publishBtn:0,
     recordSpaceRemain:0,
     recordStatus:0,
     settings:0,
@@ -46,33 +44,41 @@ guiElements = {
     ptzBoundBox:0,
     ptzCams:[],
     
-    publish:0,
     publishPages:[],
     publishTabs:[],
     controlContainer:0,
     progressContainer:0,
     sourceFileList:0,
-    publishCopyBtn:0,
-    publishDeleteBtn:0,
     publishFileList:0,
     burnerStartBtn:0,
-    burnerResumeBtn:0,
     fileStartBtn:0,
-    fileResumeBtn:0,
     uploadURI:0,
     uploadUser:0,
     uploadPwd:0,
     uploadOutName:0,
     uploadStartBtn:0,
-    uploadResumeBtn:0,
     progressText:0,
     currentProgress:0
 }
 
+function menu(){
+    
+    $('#main').hide();
+    $('#publish').hide();
+    $('#settings').hide();
+    $('#menu').show();
+    
+    enableALvls = 0;
+    atemALvl = {audioLevels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]};
+    
+}
+
 function main(){
     
-    guiElements.publish.style.display = "none";
-    guiElements.main.style.display = "block";
+    $('#menu').hide();
+    $('#publish').hide();
+    $('#settings').hide();
+    $('#main').show();
     
     enableALvls = 1;
     
@@ -80,13 +86,29 @@ function main(){
 
 function publish(){
     
-    guiElements.main.style.display = "none";
-    guiElements.publish.style.display = "block";
+    $('#main').hide();
+    $('#menu').hide();
+    $('#settings').hide();
+    $('#publish').show();
+    
     
     enableALvls = 0;
     atemALvl = {audioLevels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]};
     
-    socket.emit('getFileList');
+    socket.emit('publisher_getFileList');
+    
+}
+
+function settings(){
+    
+    $('#main').hide();
+    $('#menu').hide();
+    $('#publish').hide();
+    $('#settings').show();
+    
+    
+    enableALvls = 0;
+    atemALvl = {audioLevels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]};
     
 }
 
@@ -609,9 +631,6 @@ function guiRecord(){
         guiElements.recordStatus.innerHTML = "<b>Recorder Offline</b>";
         guiElements.recordBtn.className = guiElements.recordBtn.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
         guiElements.recordBtn.innerHTML = 'RECORD';
-        guiElements.publishBtn.className = guiElements.publishBtn.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
-        guiElements.publishBtn.innerHTML = 'PUBLISH';
-        guiElements.publishBtn.disabled = false;
         guiElements.recordBtn.disabled = true;
         guiElements.stopBtn.disabled = true;
     } else if(recorderStatus.recording){
@@ -619,8 +638,6 @@ function guiRecord(){
         guiElements.recordStatus.innerHTML = "<b>Currently Recording</b>";
         guiElements.recordBtn.className = guiElements.recordBtn.className.replace( /(?:^|\s)btn-default(?!\S)/g , ' btn-danger ' );
         guiElements.recordBtn.innerHTML = 'NOW RECORDING';
-        guiElements.publishBtn.className = guiElements.publishBtn.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
-        guiElements.publishBtn.disabled = true;
         guiElements.stopBtn.disabled = false;
         guiElements.recordBtn.disabled = true;
     } else if(publisherStatus.status!=0){
@@ -628,9 +645,6 @@ function guiRecord(){
         guiElements.recordStatus.innerHTML = "<b>Unable to Record</b> (Publishing)";
         guiElements.recordBtn.className = guiElements.recordBtn.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
         guiElements.recordBtn.innerHTML = 'RECORD';
-        guiElements.publishBtn.className = guiElements.publishBtn.className.replace( /(?:^|\s)btn-default(?!\S)/g , ' btn-primary ' );
-        guiElements.publishBtn.innerHTML = 'PUBLISHING';
-        guiElements.publishBtn.disabled = true;
         guiElements.stopBtn.disabled = true;
         guiElements.recordBtn.disabled = true;
     } else {
@@ -638,9 +652,6 @@ function guiRecord(){
         guiElements.recordStatus.innerHTML = "<b>Currently Recording</b>";
         guiElements.recordBtn.className = guiElements.recordBtn.className.replace( /(?:^|\s)btn-danger(?!\S)/g , ' btn-default ' );
         guiElements.recordBtn.innerHTML = 'RECORD';
-        guiElements.publishBtn.className = guiElements.publishBtn.className.replace( /(?:^|\s)btn-primary(?!\S)/g , ' btn-default ' );
-        guiElements.publishBtn.innerHTML = 'PUBLISH';
-        guiElements.publishBtn.disabled = false;
         guiElements.recordBtn.disabled = false;
         guiElements.stopBtn.disabled = true;
     }
@@ -741,16 +752,11 @@ function ptzRecallPreset(preset){
 function onFileList(list){
     
     // Clear list
-    while (sourceFileList.options.length>0) {
-        sourceFileList.remove(0);
-    }
+    $('#sourceFileList').empty();
     
     // Write new elements
     for (var i = 0; i < list.length; i++) {
-        var opt = document.createElement("option");
-        opt.innerHTML = list[i];
-        // Append it to the select element
-        sourceFileList.add(opt,0);
+        $('#sourceFileList').append('<li class="list-group-item" style="padding:0"><button style="border:0;padding:4px 14px;background:none;float:right;font-size:1.6em;" onclick="copyToPublishList('+"'"+list[i]+"'"+')"><span class="glyphicon glyphicon-plus"></span></button><div style="padding:10px;">'+list[i]+'</div></li>');
     }
     
 }
@@ -791,74 +797,72 @@ function guiPublishProgress(){
     }
     
     if(publisherStatus.lastDiscStatus==3) {
-        guiElements.burnerResumeBtn.removeAttribute("disabled");
-        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>&nbsp;COPY LAST'
+        $('#burnerResumeBtn').removeAttr("disabled");
+        $('#burnerResumeBtn').html('<span class="glyphicon glyphicon-repeat" aria-hidden="true"></span>&nbsp;COPY LAST');
     } else if(publisherStatus.lastDiscStatus>0){
-        guiElements.burnerResumeBtn.removeAttribute("disabled");
-        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span>&nbsp;RESUME LAST'
+        $('#burnerResumeBtn').removeAttr("disabled");
+        $('#burnerResumeBtn').html('<span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span>&nbsp;RESUME LAST');
     } else {
-        guiElements.burnerResumeBtn.setAttribute("disabled","true");
-        guiElements.burnerResumeBtn.innerHTML = '<span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;RESUME/COPY'
+        $('#burnerResumeBtn').attr("disabled","true");
+        $('#burnerResumeBtn').html('<span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;RESUME/COPY');
+    }
+    
+    if(publisherStatus.lastDiscStatus>0){
+        $('#fileResumeBtn').removeAttr("disabled");
+        $('#uploadResumeBtn').removeAttr("disabled");
+        $('#fileResumeBtn').html('<span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span>&nbsp;REPEAT LAST');
+        $('#uploadResumeBtn').html('<span class="glyphicon glyphicon-play-circle" aria-hidden="true"></span>&nbsp;REUPLOAD LAST');
+    } else {
+        $('#fileResumeBtn').attr("disabled","true");
+        $('#uploadResumeBtn').attr("disabled","true");
+        $('#fileResumeBtn').html('<span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;REPEAT LAST');
+        $('#uploadResumeBtn').html('<span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;REUPLOAD LAST');
     }
     
 }
 
 //burner stuff
-
-function copyToPublishList(){
+//TODO
+function copyToPublishList(filename){
     
-    // Iterate over options
-    for (var i=0; i<sourceFileList.options.length; i++) {
-        
-        // check if selected
-        if ( sourceFileList.options[i].selected ) {
-            // if yes, copy to publish list
-            var opt = document.createElement("option");
-            opt.innerHTML = sourceFileList.options[i].innerHTML;
-            guiElements.publishFileList.add(opt);
-        }
-    }
+    $('#publishFileList').append('<li class="list-group-item" style="padding:0"><button style="border:0;padding:4px 14px;background:none;float:right;font-size:1.6em;" onclick="deleteFromPublishList(this)"><span class="glyphicon glyphicon-minus"></span></button><div style="padding:10px;">'+filename+'</div></li>');
     
 }
 
-function deleteFromPublishList(){
+function deleteFromPublishList(element){
     
-    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
-        
-        // check if selected
-        if ( guiElements.publishFileList.options[i].selected ) {
-            // if yes, remove from publish list
-            var opt = document.createElement("option");
-            opt.innerHTML = sourceFileList.options[i].innerHTML;
-            guiElements.publishFileList.remove(i);
-            return;
-        }
-    }
+    $( element ).closest("li").remove();
+    
 }
 
 function burnDisc(resume){
-    var fileList = [];
-    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
-        fileList.push(guiElements.publishFileList.options[i].value);
-    }
     
-    socket.emit('burnDisc', {resume:resume, sourceFNames:fileList});
+    var fileList = [];
+    $('#publishFileList li div').each(function() {
+        fileList.push($( this ).html());
+    });
+    
+    var menu = $('#discMenuList').val();
+    
+    socket.emit('burnDisc', {resume:resume, menu:menu, sourceFNames:fileList});
 }
 
 function uploadFile(resume){
+    
     var fileList = [];
-    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
-        fileList.push(guiElements.publishFileList.options[i].value);
-    }
+    $('#publishFileList li div').each(function() {
+        fileList.push($( this ).html());
+    });
     
     socket.emit('uploadFile', {resume:resume, sourceFNames:fileList,destFName:guiElements.uploadOutName.value,transcode:true,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
 }
 
 function copyFile(resume){
+    
     var fileList = [];
-    for (var i=0; i<guiElements.publishFileList.options.length; i++) {
-        fileList.push(guiElements.publishFileList.options[i].value);
-    }
+    $('#publishFileList li div').each(function() {
+        fileList.push($( this ).html());
+    });
     
     socket.emit('copyFile', {resume:resume, sourceFNames:fileList,destFName:guiElements.uploadOutName.value,transcode:true,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
 }
@@ -904,8 +908,6 @@ window.onbeforeunload = function(e) {
  * Connects GUI elements to vars for easy access
  */
 function connectGui(){
-    
-    guiElements.main = document.getElementById("main");
     
     guiElements.mainPages = document.getElementsByClassName("indexPage");
     guiElements.mainTabs = document.getElementsByClassName("indexTab");
@@ -968,11 +970,8 @@ function connectGui(){
     
     guiElements.recordBtn = document.getElementById("recordBtn");
     guiElements.stopBtn = document.getElementById("stopBtn");
-    guiElements.publishBtn = document.getElementById("publishBtn");
     guiElements.recordSpaceRemain = document.getElementById("recordSpaceLbl");
     guiElements.recordStatus = document.getElementById("recordStatusLbl");
-    
-    guiElements.settings = document.getElementById("settingsBtn");
     
     guiElements.mediaPlay = document.getElementById("mediaPlay");
     guiElements.mediaPause = document.getElementById("mediaPause");
@@ -987,26 +986,20 @@ function connectGui(){
     guiElements.ptzHitarea = document.getElementById("ptzHitarea");
     guiElements.ptzCams = document.getElementsByClassName("ptzCamTab");
     
-    guiElements.publish = document.getElementById("publish");
     guiElements.publishPages = document.getElementsByClassName("publishPage");
     guiElements.publishTabs = document.getElementsByClassName("publishTab");
     guiElements.controlContainer = document.getElementById("controls");
     guiElements.progressContainer = document.getElementById("progress");
     guiElements.sourceFileList = document.getElementById("sourceFileList");
-    guiElements.publishCopyBtn = document.getElementById("publishCopyBtn");
-    guiElements.publishDeleteBtn = document.getElementById("publishDeleteBtn");
     guiElements.publishFileList = document.getElementById("publishFileList");
     guiElements.burnerStartBtn = document.getElementById("burnerStartBtn");
-    guiElements.burnerResumeBtn = document.getElementById("burnerResumeBtn");
     guiElements.fileStartBtn = document.getElementById("fileStartBtn");
-    guiElements.fileResumeBtn = document.getElementById("fileResumeBtn");
     
     guiElements.uploadURI = document.getElementById("uploadURI");
     guiElements.uploadUser = document.getElementById("uploadUser");
     guiElements.uploadPwd = document.getElementById("uploadPwd");
     guiElements.uploadOutName = document.getElementById("uploadOutName");
     guiElements.uploadStartBtn = document.getElementById("uploadStartBtn");
-    guiElements.uploadResumeBtn = document.getElementById("uploadResumeBtn");
     guiElements.progressText = document.getElementById("progressText");
     guiElements.currentProgress = document.getElementById("currentProgress");
     

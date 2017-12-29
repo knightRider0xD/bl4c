@@ -7,22 +7,23 @@ var cookieParser    = require('cookie-parser');
 var bodyParser      = require('body-parser');
 var routes          = require('./routes/index');
 var users           = require('./routes/users');
+var sleep           = require('sleep');
+var spawn           = require('child_process').spawn;
 
 var config = require('nconf');
 
 config.file('config/config.json');
 config.defaults({
     "global": {
-        "ip": "192.168.10.232"
+        "ip": "192.168.10.232",
+        "http_port": 8080,
+        "live_stream": 5000
     },
     "http": {
         "port": 8080
     },
     "live_stream": {
         "port": 5000
-    },
-    "mplayer": {
-        "port": 4991
     }
 });
 
@@ -31,29 +32,17 @@ var plugins = {};
 
 // global vars
 var exiting = 0;
-var my_ip  = config.get('global:ip');
+var global_config = config.get('global');
+config.set('global', global_config);
+config.save();
 
 // HTTP & SIO Vars
-var httpPort    = config.get('http:port');
 var app         = 0;
 var http        = 0;
 var io          = 0;
 var sioSockets  = [];
 var sioEvents   = [];
 var sioConnects = [];
-var sleep       = require('sleep');
-var spawn       = require('child_process').spawn;
-//var fs        = require("fs");
-
-
-// Media Player Vars
-var mplayerStatus = {connected:0,playing:0};
-var mplayerPort = config.get('mplayer:port');
-var mplayer = 0;
-var mplayerWait = 0;
-
-
-
 
 
 function PluginConnector(name) {
@@ -65,18 +54,36 @@ PluginConnector.prototype.sendNotice = function(signalName, value) {
         try {
             plugins[i].notify(this.pluginName+'_'+signalName, value);
         } catch (err) {
-            console.log("Error in cross-plugin-communication:\n"+this.pluginName+" notifying "+Object.keys(plugins)[i]+"\nSignal: "+signalName+"\nValue: "+value.toString()+"\nError: "+err;
+            console.log("Error in cross-plugin-communication:\n"+this.pluginName+" notifying "+Object.keys(plugins)[i]+"\nSignal: "+signalName+"\nValue: "+value.toString()+"\nError: "+err);
         }
     }
 }
 
 //Register callbacks for Socket.IO events
 PluginConnector.prototype.registerSioEvent = function(eventName, callback) {
+
     if ( eventName === 'connected' ) {
-        sioConnects.push({'callback':callback});
+        var callback_shell = function(){
+            try {
+                callback();
+            } catch (err) {
+                console.log("Error while running Socket.IO connection: "+err);
+            }
+        };
+        sioConnects.push({'callback':callback_shell});
     } else {
-        sioEvents.push({'name':this.pluginName+'_'+eventName, 'callback':callback});
-        socket.disconnect('Resetting connection to register new server plugin.');
+        var pluginName = this.pluginName;
+        var callback_shell = function(){
+            try {
+                console.log("Socket.IO received "+pluginName+'_'+eventName+": "+arguments);
+                callback.apply(this, arguments);
+            } catch (err) {
+                console.log("Error while running Socket.IO event "+pluginName+'_'+eventName+": "+err);
+            }
+        };
+        
+        sioEvents.push({'name':this.pluginName+'_'+eventName, 'callback':callback_shell});
+        //socket.disconnect('Resetting connection to register new server plugin.');
     }
 }
 
@@ -84,28 +91,36 @@ PluginConnector.prototype.doSioEmit = function(signalName, value) {
     io.emit(this.pluginName+'_'+signalName, value);
 }
 
-PluginConnector.prototype.getConfig = function() {
-    return config.get(this.pluginName);
-}
-
 PluginConnector.prototype.getConfig = function(key) {
-    return config.get(this.pluginName+':'+key);
+    if (key === undefined){
+        return config.get(this.pluginName);
+    } else {
+        return config.get(this.pluginName+':'+key);
+    }
 }
 
 PluginConnector.prototype.setConfigDefaults = function(object) {
-    config.defaults({this.pluginName: object});
+    //Set defaults
+    var defaults_obj = {};
+    defaults_obj[this.pluginName] = object;
+    config.defaults(defaults_obj);
+    //Re-write current config into config file, saving any defaults.
+    var curr_config = config.get(this.pluginName);
+    config.set(this.pluginName, curr_config);
+    config.save();
 }
 
 PluginConnector.prototype.setConfig = function(key, value) {
     config.set(this.pluginName+':'+key, value);
-}
-
-PluginConnector.prototype.getGlobalConfig = function() {
-    return config.get('global');
+    config.save();
 }
 
 PluginConnector.prototype.getGlobalConfig = function(key) {
-    return config.get('global:'+key);
+    if (key === undefined){
+        return config.get('global');
+    } else {
+        return config.get('global:'+key);
+    }
 }
 
 
@@ -117,6 +132,8 @@ function loadPlugins(){
         blacklist = fs.readFileSync('./plugins/blacklist.txt', 'utf8').split('\n');
     }
     
+    console.log("The following modules are blacklisted: "+blacklist.toString());
+    
     out = fs.readdirSync('./plugins/');
     for (var i=0; i<out.length; i++){
         if (fs.lstatSync('./plugins/'+out[i]).isDirectory() && fs.existsSync('./plugins/'+out[i]+'/main.js')) {
@@ -125,7 +142,7 @@ function loadPlugins(){
             }
             //plugin folder
             plugins[out[i]] = require('./plugins/'+out[i]+'/main');
-            plugins[out[i]].load(new PluginConnector(out[i]));
+            plugins[out[i]].load(new PluginConnector(String(out[i])));
         }
         
     }
@@ -145,132 +162,6 @@ function unloadPlugins(){
         plugins.pop();
     }
     
-}
-
-
-
-
-/**************************************************/
-/**********         Media Player         **********/
-/**************************************************/
-
-function getMediaPlayerStatus(){
-    if(mplayer){
-        mplayer.stdin.write('status\n'); // send 'status'
-    }
-}
-
-function connectToMediaPlayer(){
-    
-    if(exiting){return;}
-    
-    if(mplayer){
-        io.emit('mplayerUpdate', mplayerStatus);
-        console.log('Media Player already initialised');
-        return;
-    }
-    
-    //connect to mplayer via telnet on 4991
-    mplayer = spawn('telnet',['localhost','4991'],{cwd: process.cwd(), env: process.env, detached: true});
-    
-    mplayer.stdout.on('data', function (data) {
-        var output = String(data).split("\n");
-        for (var i = 0; i < output.length; i++) {
-            if(output[i].indexOf('state playing')>=0){
-                mplayerStatus.playing = 1;
-            } else if(output[i].indexOf('state stopped')>=0){
-                mplayerStatus.playing = 0;
-            } else if(output[i].indexOf('state paused')>=0){
-                mplayerStatus.playing = 2;
-                
-            }
-        }
-        io.emit('mplayerUpdate', mplayerStatus);
-    });
-    
-    mplayer.on('error', function (err) {
-        console.log('Failed to connect to mplayer.');
-    });
-
-    mplayer.on('exit', function (code) {
-        console.log('Connection to mplayer exited with code ' + code + '\nReconnecting...');
-        mplayer.kill('SIGKILL');
-        mplayer = 0;
-        mplayerStatus.connected = 0;
-        io.emit('mplayerUpdate', mplayerStatus);
-        if(exiting){
-            return;
-        }
-        
-        setTimeout(function(){
-            connectToMediaPlayer();
-        }, 3000);
-    });
-    
-    setTimeout(function(){
-        getMediaPlayerStatus();
-    }, 100);
-    
-}
-
-function playMediaPlayer(mrl){
-    
-    if(exiting){return;}
-    
-    if(!mplayer){
-        io.emit('mplayerUpdate', mplayerStatus);
-        console.log('mplayer Offline');
-        return;
-    }
-    
-    if(publisher){
-        io.emit('publisherUpdate', publisherStatus);
-        console.log('Cannot Play; Publishing');
-        return;
-    }
-    
-    mplayer.stdin.write('stop\n'); // send 'stop'
-    mplayer.stdin.write('clear\n'); // send 'clear'
-    
-    var now = new Date();
-    
-    mplayer.stdin.write('add '+mrl+'\n');
-    console.log('add '+mrl+'\n');
-    
-    setTimeout(function(){
-        getMediaPlayerStatus();
-    }, 100);
-    
-}
-
-function pauseMediaPlayer(){
-    if(mplayer){
-        mplayer.stdin.write('pause\n'); // send 'pause'
-    }
-    
-    setTimeout(function(){
-        getMediaPlayerStatus();
-    }, 100);
-}
-
-function stopMediaPlayer(){
-    if(mplayer){
-        mplayer.stdin.write('stop\n'); // send 'stop'
-        mplayer.stdin.write('clear\n'); // send 'clear'
-    }
-    
-    setTimeout(function(){
-        getMediaPlayerStatus();
-    }, 100);
-}
-
-function quitMediaPlayer(){
-    if(mplayer){
-        stopMediaPlayer();
-        exiting = 1;
-        mplayer.kill('SIGTERM');
-        exiting = 0;
-    }
 }
 
 
@@ -332,7 +223,7 @@ function initApp(){
     });
 
 
-    //module.exports = app;
+    module.exports = app;
     
 }
 
@@ -343,8 +234,8 @@ function initHttp(){
     
     http = require('http').Server(app);
     
-    http.listen(httpPort, function(){
-        console.log('listening on '+my_ip+':'+httpPort);
+    http.listen(global_config.http_port, function(){
+        console.log('listening on '+global_config.ip+':'+global_config.http_port);
     }); 
     
 }
@@ -378,65 +269,31 @@ function initSIO(){
         
         //Register listeners to plugin callbacks
         for (var i=0; i<sioEvents.length; i++){
-            socket.on(sioEvents[i].name, function(){
-                try {
-                    sioEvents[i].callback.apply(this, arguments);
-                } catch (err) {
-                    console.log("Error while running Socket.IO event "+sioEvents[i].name+": "+err);
-                }
-            });
+            socket.on(sioEvents[i].name+'', sioEvents[i].callback);
         }
         
         //Run any registered connect callbacks for plugins.
         for (var i=0; i<sioConnects.length; i++){
-            try {
-                sioConnects[i].callback();
-            } catch (err) {
-                console.log("Error while running Socket.IO connection: "+err);
-            }
+            sioConnects[i].callback();
         }
         
-        /*
-        
-        
-        
-        
-        socket.on('playMedia', function(media){
-            playMediaPlayer(media);
-        });
-        
-        socket.on('pauseMedia', function(){
-            pauseMediaPlayer();
-        });
-        
-        socket.on('stopMedia', function(){
-            stopMediaPlayer();
-        });
-    
-        */
         
     });
 
 }
 
 function cleanup(){
-    quitMediaPlayer();
-    quitRecorder();
-    stopPublisher();
-    stopAtemConnection();
-    exiting = 1;
+    unloadPlugins();
     process.exit(0);
 }
 
-//process.on('exit', function () {console.log('Exiting. Cleaning Up...'); cleanup();});
+process.on('exit', function () {console.log('Exiting. Cleaning Up...'); cleanup();});
 process.on('SIGINT', function () {console.log('SIGINT received.'); process.exit();});
 process.on('SIGTERM', function () {console.log('SIGTERM received.'); process.exit();});
 process.on('uncaughtException', function(e) {console.log('Uncaught Exception!\n'+e); process.exit();});//initHttp();});
 
 initApp();
 initHttp();
-//initSIO();
+initSIO();
 
 loadPlugins();
-
-//connectToMediaPlayer();
