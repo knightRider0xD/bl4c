@@ -1,0 +1,227 @@
+/* Preview, Aux and Program Switcher Buttons */
+
+.btn-prev {
+  border-color: #ccc;
+  background-color: #ffffff;
+  color: #398439;
+}
+
+.btn-aux {
+  border-color: #ccc;
+  background-color: #ffffff;
+  color: #d58512;
+}
+
+.btn-prog {
+  border-color: #ccc;
+  background-color: #ffffff;
+  color: #ac2925;
+}
+
+
+/* Mixer Volume Control */
+
+div.amixer-volume-div {
+  box-sizing: border-box;
+  position: relative;
+  display: inline-block;
+  height:332px;
+  width:45%;
+  overflow:hidden;
+  text-align:center;
+  z-index:2;
+}
+
+div.amixer-volume-div div.volume-fader {
+  box-sizing: border-box;
+  position: absolute;
+  height:20px;
+  width:100%;
+}
+
+div.amixer-volume-div div.fader-centerline {
+  box-sizing: border-box;
+  position: absolute;
+  top: 1%;
+  height:98%;
+  width:2px;
+  background-color: grey;
+  left: 50%;
+}
+
+div.amixer-volume-div div.volume-hitbox {
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-block;
+  height:100%;
+  width:100%;
+  padding: 0;
+  margin: 0;
+  background:none;
+}
+
+
+/* Mixer Levels Dsiplay and Mute Button */
+
+div.amixer-levels-div {
+  box-sizing: border-box;
+  display: inline-block;
+  width: 50%;
+}
+
+div.amixer-levels-div button.btn-mute {
+  width:100%;
+  padding-left:4px;
+  padding-right:4px;
+}
+
+div.amixer-levels-div div.level-bar {
+  position: relative;
+  padding: 0px;
+  margin: 0px;
+  display: inline-block;
+  height:276px;
+  width:45%;
+  margin-left: 1%;
+  overflow:hidden;
+  text-align:center;
+}
+
+div.amixer-levels-div div.level-bar div.level-value {
+  position: absolute;
+  width:100%;
+  height: 100%;
+  top: 0;
+  background-color: #dddddd;
+  -webkit-transition: height .2s linear;
+       -o-transition: height .2s linear;
+          transition: height .2s linear;
+}
+
+div.amixer-levels-div div.level-bar div.level-ref.ref-normal {
+  position: absolute;
+  top: 60%;
+  width:100%;
+  height: 40%;
+  background-color: #5cb85c;
+}
+
+div.amixer-levels-div div.level-bar div.level-ref.ref-high {
+  position: absolute;
+  top: 20%;
+  width:100%;
+  height: 40%;
+  background-color: #f0ad4e;
+}
+
+div.amixer-levels-div div.level-bar div.level-ref.ref-over  {
+  position: absolute;
+  top: 0;
+  width:100%;
+  height: 20%;
+  background-color: #d9534f;
+}
+
+
+/* Muted Mixer Levels Dsiplay and Mute Button */
+
+div.amixer-levels-div.amixer-muted button.btn-mute {
+  color: red;
+  font-weight: bold;
+}
+
+div.amixer-levels-div.amixer-muted div.level-bar div.level-ref.ref-normal  {
+  background-color: Grey;
+}
+
+div.amixer-levels-div.amixer-muted div.level-bar div.level-ref.ref-high {
+  background-color: DarkGrey;
+}
+
+div.amixer-levels-div.amixer-muted div.level-bar div.level-ref.ref-over  {
+  background-color: DimGrey;
+}
+
+select.amixer-channel {
+  width:100%;
+  padding-left:4px;
+  padding-right:4px;
+}
+
+div.amixer-channel-div {
+  text-align:center;
+  font-size:1.2em;
+  margin: 5px 0 0 0;
+}
+
+div.ptz-pan-div {
+  height:260px;
+  padding:0;
+  box-sizing: border-box;
+  position: relative;
+  display: inline-block;
+  overflow:hidden;
+  z-index:2;
+}
+
+div.ptz-pan-div .ptz-slider {
+  position: relative;
+  width:40px;
+  height:40px;
+  text-align: center;
+  border-radius: 18px;
+  padding: 10px;
+}
+
+div.ptz-pan-div div.ptz-hitbox {
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-block;
+  height:100%;
+  width:100%;
+  padding: 0;
+  margin: 0;
+  background:none;
+}
+
+div.ptz-zoom-div {
+  height:260px;
+  padding:0;
+  box-sizing: border-box;
+  position: relative;
+  display: inline-block;
+  overflow:hidden;
+  z-index:2;
+}
+
+div.ptz-zoom-div .ptz-slider {
+  position: relative;
+  height:20px;
+}
+
+div.ptz-zoom-div div.ptz-hitbox {
+  box-sizing: border-box;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: inline-block;
+  height:100%;
+  width:100%;
+  padding: 0;
+  margin: 0;
+  background:none;
+}
+
+div.ptz-zoom-div div.slider-centerline {
+  box-sizing: border-box;
+  position: absolute;
+  top: 1%;
+  height:98%;
+  width:2px;
+  background-color: grey;
+  left: 50%;
+}

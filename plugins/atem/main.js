@@ -1,6 +1,6 @@
 var atem = 0;
-var atemStatus = {atem:0,program:0,preview:0,aux:0,ftb:0,transLength:0.6,audioChannels:[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]],dsk:[{live:false,tie:false},{live:false,tie:false}]};
-var atemALvls = {audioLevels:[[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100],[-100,-100]]};
+var atemStatus = {atem:0,program:0,preview:0,aux:0,ftb:0,transLength:0.6,audioChannels:{"0":[0,0],"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],"7":[0,0],"8":[0,0], "1001":[0,0], "1201":[0,0]},dsk:[{live:false,tie:false},{live:false,tie:false}]};
+var atemALvls = {audioLevels:{"0":[-100,-100],"1":[-100,-100],"2":[-100,-100],"3":[-100,-100],"4":[-100,-100],"5":[-100,-100],"6":[-100,-100],"7":[-100,-100],"8":[-100,-100], "1001":[-100,-100], "1201":[-100,-100]}};
 var aLvlInterval = 4;
 var aLvlCount = 0;
 var inMutex = 0;
@@ -14,10 +14,14 @@ var config = {
         "ip": "192.168.10.240",
         "fps": 50,
         "alvl_frequency": 4,
-        "alvl_presets": [ {"audioChannels":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0]]},
-                    {"audioChannels":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[1,-5],[0,0],[0,0]]},
-                    {"audioChannels":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[1,-10],[0,0],[0,0]]},
-                    {"audioChannels":[[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[0,0],[1,-10],[0,0],[1,-10],[0,0],[0,0]]} ]
+        "alvl_presets": [   {"audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
+                                                "7":[0,0],"8":[0,0], "1001":[0,0], "1201":[0,0]}},
+                            {"audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
+                                                "7":[0,0],"8":[0,0], "1001":[0,0], "1201":[1,-5]}},
+                            {"audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
+                                                "7":[0,0],"8":[0,0], "1001":[0,0], "1201":[1,-10]}},
+                            {"audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
+                                                "7":[0,0],"8":[0,0], "1001":[1,-10], "1201":[1,-10]}}    ]
 };
 
 exports.load = function (main_sys) {
@@ -50,19 +54,71 @@ exports.notify = function (signalName, value) {
 // Socket.IO Callbacks
 
 sio_hooks.push({event:'changeProgram', callback:function(change){
-    if(change.trans == 'cut'){
-        sendAtemInput('SET PREV '+change.input);
-        sendAtemInput('DO CUT');
-    } else if(change.trans == 'mix'){
-        sendAtemInput('SET PREV '+change.input);
-        sendAtemInput('DO TRANS');
+    if (change.input % 1000 == 5){
+        //Set Keyers
+        var targetKeyer = ((change.input-5000) % 10)-1;
+        for(var i=0; i<atemStatus.dsk.length; i++){
+            if((atemStatus.dsk[i].live == true && i != targetKeyer)||(atemStatus.dsk[i].live == false && i == targetKeyer)){
+                sendAtemInput('SET DSKTIE '+i+' '+1);
+            } else {
+                sendAtemInput('SET DSKTIE '+i+' '+0);
+            }
+        }
+        //Do Trans
+        if(change.trans == 'cut'){
+            sendAtemInput('DO CUT');
+        } else if(change.trans == 'mix'){
+            sendAtemInput('DO TRANS');
+        } else {
+            var currPrev = atemStatus.preview;
+            sendAtemInput('DO CUT');
+            sendAtemInput('SET PREV '+currPrev);
+        }
     } else {
-        sendAtemInput('SET PROG '+change.input);
+        //Clear Keyers
+        for(var i=0; i<atemStatus.dsk.length; i++){
+            if(atemStatus.dsk[i].live && !atemStatus.dsk[i].tie){
+                sendAtemInput('SET DSKTIE '+i+' '+1);
+            } else if(!atemStatus.dsk[i].live && atemStatus.dsk[i].tie){
+                sendAtemInput('SET DSKTIE '+i+' '+0);
+            }
+        }
+        //Do Trans
+        if(change.trans == 'cut'){
+            sendAtemInput('SET PREV '+change.input);
+            sendAtemInput('DO CUT');
+        } else if(change.trans == 'mix'){
+            sendAtemInput('SET PREV '+change.input);
+            sendAtemInput('DO TRANS');
+        } else {
+            sendAtemInput('SET PROG '+change.input);
+        }
     }
+    
 }});
 
 sio_hooks.push({event:'setPreview', callback:function(input){
-    sendAtemInput('SET PREV '+input);
+    if (change.input % 1000 == 5){
+        //Set Keyers
+        var targetKeyer = ((change.input-5000) % 10)-1;
+        for(var i=0; i<atemStatus.dsk.length; i++){
+            if((atemStatus.dsk[i].live == true && i != targetKeyer)||(atemStatus.dsk[i].live == false && i == targetKeyer)){
+                sendAtemInput('SET DSKTIE '+i+' '+1);
+            } else {
+                sendAtemInput('SET DSKTIE '+i+' '+0);
+            }
+        }
+    } else {
+        //Clear Keyers
+        for(var i=0; i<atemStatus.dsk.length; i++){
+            if(atemStatus.dsk[i].live && !atemStatus.dsk[i].tie){
+                sendAtemInput('SET DSKTIE '+i+' '+1);
+            } else if(!atemStatus.dsk[i].live && atemStatus.dsk[i].tie){
+                sendAtemInput('SET DSKTIE '+i+' '+0);
+            }
+        }
+        sendAtemInput('SET PREV '+change.input);
+    }
 }});
 
 sio_hooks.push({event:'setAux', callback:function(input){
@@ -78,7 +134,7 @@ sio_hooks.push({event:'setAudioMute', callback:function(input){
 }});
 
 sio_hooks.push({event:'setAudioVolume', callback:function(input){
-    if(input.channel>0){
+    if(input.channel!='0'){
         sendAtemInput('SET AINGAIN '+input.channel+' '+input.volume);
     } else {
         sendAtemInput('SET AMSTRGAIN '+input.volume);
@@ -113,27 +169,15 @@ function parseAtemOutput(line){
         if(aLvlCount){
             break;
         }
-        var chnl = parseInt(cmd[2]);
+        var chnl = cmd[2];
         var lLvl = parseFloat(cmd[4]);
         var rLvl = parseFloat(cmd[5]);
         
         if(isNaN(lLvl)){lLvl=-100;}
         if(isNaN(rLvl)){rLvl=-100;}
-        if(chnl<=8){
-            atemALvls.audioLevels[chnl][0] = lLvl;
-            atemALvls.audioLevels[chnl][1] = rLvl;
-        } else {
-            switch (chnl) {
-            case 1001:
-                atemALvls.audioLevels[11][0] = lLvl;
-                atemALvls.audioLevels[11][1] = rLvl;
-                break;
-            case 1201:
-                atemALvls.audioLevels[13][0] = lLvl;
-                atemALvls.audioLevels[13][1] = rLvl;
-                break;
-            }
-        }
+        
+        atemALvls.audioLevels[chnl][0] = lLvl;
+        atemALvls.audioLevels[chnl][1] = rLvl;
         break;
     case "AMSTRLVL:":
         aLvlCount = ++aLvlCount%aLvlInterval;
@@ -147,48 +191,26 @@ function parseAtemOutput(line){
         var rLvl = parseFloat(cmd[2]);
         if(isNaN(lLvl)){lLvl=-100;}
         if(isNaN(rLvl)){rLvl=-100;}
-        atemALvls.audioLevels[0][0] = lLvl;
-        atemALvls.audioLevels[0][1] = rLvl;
+        atemALvls.audioLevels['0'][0] = lLvl;
+        atemALvls.audioLevels['0'][1] = rLvl;
         break;
     case "AINGAIN:":
-        var chnl = parseInt(cmd[2]);
+        var chnl = cmd[2];
         var gain = parseFloat(cmd[4]);
         if(isNaN(gain)){gain=-60;} // -inf input
-        if(chnl<=8){
-            atemStatus.audioChannels[chnl][1] = gain;
-        } else {
-            switch (chnl) {
-            case 1001:
-                atemStatus.audioChannels[11][1] = gain;
-                break;
-            case 1201:
-                atemStatus.audioChannels[13][1] = gain;
-                break;
-            }
-        }
+        atemStatus.audioChannels[chnl][1] = gain;
         system.doSioEmit('update', atemStatus);
         break;
     case "AMSTRGAIN:":
         var gain = parseFloat(cmd[1]);
         if(isNaN(gain)){gain=-60;} // -inf input
-        atemStatus.audioChannels[0][1] = gain;
+        atemStatus.audioChannels['0'][1] = gain;
         system.doSioEmit('update', atemStatus);
         break;
     case "AINSTATE:":
-        var chnl = parseInt(cmd[2]);
+        var chnl = cmd[2];
         var state = parseInt(cmd[4]);
-        if(chnl<=8){
-            atemStatus.audioChannels[chnl][0] = state;
-        } else {
-            switch (chnl) {
-            case 1001:
-                atemStatus.audioChannels[11][0] = state;
-                break;
-            case 1201:
-                atemStatus.audioChannels[13][0] = state;
-                break;
-            }
-        }
+        atemStatus.audioChannels[chnl][0] = state;
         system.doSioEmit('update', atemStatus);
         break;
     //case "AINBAL:":
@@ -235,114 +257,79 @@ function parseAtemOutput(line){
 }
 
 
-function runAudioPreset(input){
+function runAudioPreset(presetId){
+    
+    // Check if a present is already running. If so, abort. If not, mark as preset running.
+    if(aPreMutex){
+        return;
+    }
+    aPreMutex = 1;
+    
+    // Create a clone of the original audioChannels state
+    var orig = JSON.parse(JSON.stringify(atemStatus.audioChannels));
+    
+    var current = atemStatus.audioChannels;
+    var target = config.alvl_presets[presetId].audioChannels;
+    var increment = {};
+    
+    for (const chnl in target) {
         
-        if(aPreMutex){
+        // If target Channel ID not present, skip.
+        if(!(chnl in current)){
+            continue;
+        }
+        
+        // Modify inital/target positions to allow smooth fade
+        if(current[chnl][0]  == 0 && target[chnl][0]  == 1) {
+            // If currently muted but target is live, start unmuted with gain at -inf
+            current[chnl][1]  = -60;
+            sendAtemInput('SET AINGAIN '+chnl+' -60');
+            sendAtemInput('SET AINSTATE '+chnl+' 1');
+        } else if(current[chnl][0] == 1 && target[chnl][0] == 0) {
+            // If currently live but target is muted, set target gain to -inf
+            target[chnl][1] = -60;
+        } else if(current[chnl][0] == 0  && target[chnl][0]  == 0) {
+            // If currently muted and target also muted, match target gain to current to remain unchanged
+            target[chnl][1] =  current[chnl][1];
+        }
+        
+        // Setup increments at 1/20th of target value
+        increment[chnl]  = (target[chnl][1]  - current[chnl][1])/20.0;
+    }
+    
+    function doIncrement(i){
+        if(i==0){
             return;
         }
         
-        aPreMutex = 1;
-        
-        var orig = atemStatus.audioChannels.slice();
-        for (var i = 0; i < orig.length; i++) {
-            orig[i] = orig[i].slice();
+        for (const chnl in increment) {
+            // Calculate new gain at this increment
+            current[chnl][1] += increment[chnl];
+            
+            // Send new gain target
+            sendAtemInput('SET AINGAIN '+chnl+' '+current[chnl][1]);
         }
         
-        var current = atemStatus.audioChannels;
-        var target = config.alvl_presets[input].audioChannels;
-        var increment = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0];
-        
-        if(current[1][0]  == 0 && target[1][0]  == 1){current[1][1]  = -60; sendAtemInput('SET AINSTATE 1 1');    sendAtemInput('SET AINGAIN 1 -60');}
-        if(current[2][0]  == 0 && target[2][0]  == 1){current[2][1]  = -60; sendAtemInput('SET AINSTATE 2 1');    sendAtemInput('SET AINGAIN 2 -60');}
-        if(current[3][0]  == 0 && target[3][0]  == 1){current[3][1]  = -60; sendAtemInput('SET AINSTATE 3 1');    sendAtemInput('SET AINGAIN 3 -60');}
-        if(current[4][0]  == 0 && target[4][0]  == 1){current[4][1]  = -60; sendAtemInput('SET AINSTATE 4 1');    sendAtemInput('SET AINGAIN 4 -60');}
-        if(current[5][0]  == 0 && target[5][0]  == 1){current[5][1]  = -60; sendAtemInput('SET AINSTATE 5 1');    sendAtemInput('SET AINGAIN 5 -60');}
-        if(current[6][0]  == 0 && target[6][0]  == 1){current[6][1]  = -60; sendAtemInput('SET AINSTATE 6 1');    sendAtemInput('SET AINGAIN 6 -60');}
-        if(current[7][0]  == 0 && target[7][0]  == 1){current[7][1]  = -60; sendAtemInput('SET AINSTATE 7 1');    sendAtemInput('SET AINGAIN 7 -60');}
-        if(current[8][0]  == 0 && target[8][0]  == 1){current[8][1]  = -60; sendAtemInput('SET AINSTATE 8 1');    sendAtemInput('SET AINGAIN 8 -60');}
-        if(current[11][0] == 0 && target[11][0] == 1){current[11][1] = -60; sendAtemInput('SET AINSTATE 1001 1'); sendAtemInput('SET AINGAIN 1001 -60');}
-        if(current[13][0] == 0 && target[13][0] == 1){current[13][1] = -60; sendAtemInput('SET AINSTATE 1201 1'); sendAtemInput('SET AINGAIN 1201 -60');}
-        
-        if(current[1][0] == 1  && target[1][0]  == 0){target[1][1] =  -60;}
-        if(current[2][0] == 1  && target[2][0]  == 0){target[2][1] =  -60;}
-        if(current[3][0] == 1  && target[3][0]  == 0){target[3][1] =  -60;}
-        if(current[4][0] == 1  && target[4][0]  == 0){target[4][1] =  -60;}
-        if(current[5][0] == 1  && target[5][0]  == 0){target[5][1] =  -60;}
-        if(current[6][0] == 1  && target[6][0]  == 0){target[6][1] =  -60;}
-        if(current[7][0] == 1  && target[7][0]  == 0){target[7][1] =  -60;}
-        if(current[8][0] == 1  && target[8][0]  == 0){target[8][1] =  -60;}
-        if(current[11][0] == 1 && target[11][0] == 0){target[11][1] = -60;}
-        if(current[13][0] == 1 && target[13][0] == 0){target[13][1] = -60;}
-        
-        if(current[1][0] == 0  && target[1][0]  == 0){target[1][1] =  current[1][1];}
-        if(current[2][0] == 0  && target[2][0]  == 0){target[2][1] =  current[2][1];}
-        if(current[3][0] == 0  && target[3][0]  == 0){target[3][1] =  current[3][1];}
-        if(current[4][0] == 0  && target[4][0]  == 0){target[4][1] =  current[4][1];}
-        if(current[5][0] == 0  && target[5][0]  == 0){target[5][1] =  current[5][1];}
-        if(current[6][0] == 0  && target[6][0]  == 0){target[6][1] =  current[6][1];}
-        if(current[7][0] == 0  && target[7][0]  == 0){target[7][1] =  current[7][1];}
-        if(current[8][0] == 0  && target[8][0]  == 0){target[8][1] =  current[8][1];}
-        if(current[11][0] == 0 && target[11][0] == 0){target[11][1] =  current[11][1];}
-        if(current[13][0] == 0 && target[13][0] == 0){target[13][1] =  current[13][1];}
-        
-        increment[1]  = (target[1][1]  - current[1][1])/20.0;
-        increment[2]  = (target[2][1]  - current[2][1])/20.0;
-        increment[3]  = (target[3][1]  - current[3][1])/20.0;
-        increment[4]  = (target[4][1]  - current[4][1])/20.0;
-        increment[5]  = (target[5][1]  - current[5][1])/20.0;
-        increment[6]  = (target[6][1]  - current[6][1])/20.0;
-        increment[7]  = (target[7][1]  - current[7][1])/20.0;
-        increment[8]  = (target[8][1]  - current[8][1])/20.0;
-        increment[11] = (target[11][1] - current[11][1])/20.0;
-        increment[13] = (target[13][1] - current[13][1])/20.0;
-        
-        function doIncrement(i){
-            if(i==0){
-                return;
+        // Repeat at 50ms intervals until i is 0
+        setTimeout(function(){doIncrement(i-1);}, 50);
+    }
+    
+    // Do increment 20x (@50ms) = 1s fade between start and target
+    doIncrement(20);
+    
+    // After increments complete, mute & reset inputs
+    setTimeout(function(){
+        for (const chnl in increment) {
+            // Calculate new gain at this increment
+            if(current[1][0]  == 1 && target[1][0]  == 0) {
+                sendAtemInput('SET AINSTATE '+chnl+' 0');
+                sendAtemInput('SET AINGAIN '+chnl+' '+orig[chnl][1]);
             }
-            current[1][1] = current[1][1] + increment[1];
-            current[2][1] = current[2][1] + increment[2];
-            current[3][1] = current[3][1] + increment[3];
-            current[4][1] = current[4][1] + increment[4];
-            current[5][1] = current[5][1] + increment[5];
-            current[6][1] = current[6][1] + increment[6];
-            current[7][1] = current[7][1] + increment[7];
-            current[8][1] = current[8][1] + increment[8];
-            current[11][1] = current[11][1] + increment[11];
-            current[13][1] = current[13][1] + increment[13];
-            
-            sendAtemInput('SET AINGAIN 1 '+current[1][1]);
-            sendAtemInput('SET AINGAIN 2 '+current[2][1]);
-            sendAtemInput('SET AINGAIN 3 '+current[3][1]);
-            sendAtemInput('SET AINGAIN 4 '+current[4][1]);
-            sendAtemInput('SET AINGAIN 5 '+current[5][1]);
-            sendAtemInput('SET AINGAIN 6 '+current[6][1]);
-            sendAtemInput('SET AINGAIN 7 '+current[7][1]);
-            sendAtemInput('SET AINGAIN 8 '+current[8][1]);
-            sendAtemInput('SET AINGAIN 1001 '+current[11][1]);
-            sendAtemInput('SET AINGAIN 1201 '+current[13][1]);
-            
-            setTimeout(function(){doIncrement(i-1);}, 50);
         }
-        console.log(orig[11][1]);
-        doIncrement(20);
         
-        // After increments complete, mute & reset inputs
-        setTimeout(function(){        
-        console.log(orig[11][1]);
-        if(current[1][0]  == 1 && target[1][0]  == 0){sendAtemInput('SET AINSTATE 1 0'); sendAtemInput('SET AINGAIN 1 '+orig[1][1]);}
-        if(current[2][0]  == 1 && target[2][0]  == 0){sendAtemInput('SET AINSTATE 2 0'); sendAtemInput('SET AINGAIN 2 '+orig[2][1]);}
-        if(current[3][0]  == 1 && target[3][0]  == 0){sendAtemInput('SET AINSTATE 3 0'); sendAtemInput('SET AINGAIN 3 '+orig[3][1]);}
-        if(current[4][0]  == 1 && target[4][0]  == 0){sendAtemInput('SET AINSTATE 4 0'); sendAtemInput('SET AINGAIN 4 '+orig[4][1]);}
-        if(current[5][0]  == 1 && target[5][0]  == 0){sendAtemInput('SET AINSTATE 5 0'); sendAtemInput('SET AINGAIN 5 '+orig[5][1]);}
-        if(current[6][0]  == 1 && target[6][0]  == 0){sendAtemInput('SET AINSTATE 6 0'); sendAtemInput('SET AINGAIN 6 '+orig[6][1]);}
-        if(current[7][0]  == 1 && target[7][0]  == 0){sendAtemInput('SET AINSTATE 7 0'); sendAtemInput('SET AINGAIN 7 '+orig[7][1]);}
-        if(current[8][0]  == 1 && target[8][0]  == 0){sendAtemInput('SET AINSTATE 8 0'); sendAtemInput('SET AINGAIN 8 '+orig[8][1]);}
-        if(current[11][0] == 1 && target[11][0] == 0){sendAtemInput('SET AINSTATE 1001 0'); sendAtemInput('SET AINGAIN 1001 '+orig[11][1]);}
-        if(current[13][0] == 1 && target[13][0] == 0){sendAtemInput('SET AINSTATE 1201 0'); sendAtemInput('SET AINGAIN 1201 '+orig[13][1]);}
-        
+        // Mark preset complete
         aPreMutex = 0;
-        }, 1100);
+    }, 1100);
         
 }
 

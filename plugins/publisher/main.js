@@ -68,7 +68,7 @@ sio_hooks.push({event:'copyFile', callback:function(copyInfo){
     publishFTP(copyInfo.sourceFNames, copyInfo.destFName, copyInfo.transcode, copyInfo.path, copyInfo.resume);
 }});
 
-sio_hooks.push({event:'cancelPublish', callback:function(){
+sio_hooks.push({event:'cancel', callback:function(){
     stopPublisher("Cancelled by operator");
 }});
 

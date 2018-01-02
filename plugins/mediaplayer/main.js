@@ -38,15 +38,15 @@ exports.notify = function (signalName, value) {
 }
 
 // Socket.IO Callbacks
-sio_hooks.push({event:'playMedia', callback:function(media){
+sio_hooks.push({event:'play', callback:function(media){
     playMediaPlayer(media);
 }});
 
-sio_hooks.push({event:'pauseMedia', callback:function(){
+sio_hooks.push({event:'pause', callback:function(){
     pauseMediaPlayer();
 }});
 
-sio_hooks.push({event:'stopMedia', callback:function(){
+sio_hooks.push({event:'stop', callback:function(){
     stopMediaPlayer();
 }});
     
