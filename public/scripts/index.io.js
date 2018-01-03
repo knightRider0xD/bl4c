@@ -16,6 +16,16 @@ var mixerAChnls = [ {id:"1", name:"PC (HDMI)"}, {id:"2", name:"Video PC (HDMI)"}
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
 var mplayerStatus = {connected:0,playing:0};
 var publisherStatus = {status:0,complete:0,lastDiscStatus:0,lastFileStatus:0};
+var publisherTranscodeOptions = [ {"mediatype":"video"},
+    {"mediatype":"video", "filetype":"mp4", "vFormat":"scale=1920:1080", "vFRate":"25", "vCodec":"libx264", "vBitrate":"8000k", "aCodec":"aac", "aBitrate":"320k"},
+    {"mediatype":"video", "filetype":"mp4", "vFormat":"scale=1280:720", "vFRate":"25", "vCodec":"libx264", "vBitrate":"5000k", "aCodec":"aac", "aBitrate":"320k"},
+    {"mediatype":"video", "filetype":"mp4", "vFormat":"scale=960:540", "vFRate":"25", "vCodec":"libx264", "vBitrate":"3000k", "aCodec":"aac", "aBitrate":"320k"},
+    {"mediatype":"video", "filetype":"mp4", "vFormat":"scale=640:360", "vFRate":"25", "vCodec":"libx264", "vBitrate":"1000k", "aCodec":"aac", "aBitrate":"320k"},
+    {"mediatype":"audio", "filetype":"mp3", "aCodec":"mp3", "aBitrate":"320k"},
+    {"mediatype":"audio", "filetype":"mp3", "aCodec":"mp3", "aBitrate":"160k"},
+    {"mediatype":"audio", "filetype":"mp3", "aCodec":"mp3", "aBitrate":"96k"},
+    {"mediatype":"audio", "filetype":"mp3", "aCodec":"mp3", "aBitrate":"64k"}];
+
 var slideControlMouseDown = '';
 
 var aMixers = {};
@@ -23,8 +33,6 @@ var aMixers = {};
 guiElements = {
     mainPages:[],
     mainTabs:[],
-    recordBtn:0,
-    stopBtn:0,
     recordSpaceRemain:0,
     recordStatus:0,
     settings:0,
@@ -34,17 +42,11 @@ guiElements = {
     mediaTitle:0,
     mediaStartPosM:0,
     mediaStartPosS:0,
-    ptzZoomLvl:0,
-    ptzHitarea:0,
-    ptzBoundBox:0,
     ptzCams:[],
-    
     publishPages:[],
     publishTabs:[],
     controlContainer:0,
     progressContainer:0,
-    sourceFileList:0,
-    publishFileList:0,
     burnerStartBtn:0,
     fileStartBtn:0,
     uploadURI:0,
@@ -689,17 +691,11 @@ function onFileList(list){
  */
 function guiPublishPageSwitcher(page){
     
-    var length = (guiElements.publishPages.length < guiElements.publishTabs.length) ? guiElements.publishPages.length : guiElements.publishTabs.length;
+    $('.publish-tab.active').removeClass('active');
+    $('.publish-page').hide();
     
-    for (var i = 0; i < length; i++) {
-        if(i==page){
-            guiElements.publishTabs[i].className = "publishTab active";
-            guiElements.publishPages[i].style.display = "block";
-        } else {
-            guiElements.publishTabs[i].className = "publishTab";
-            guiElements.publishPages[i].style.display = "none";
-        }
-    }
+    $('.publish-tab.tab-'+page).addClass('active');
+    $('.publish-page.page-'+page).show();
     
 }
 
@@ -708,15 +704,20 @@ function guiPublishPageSwitcher(page){
  */
 function guiPublishProgress(){
     
-    if(publisherStatus.status==0){
-        guiElements.controlContainer.style = "";
-        guiElements.progressContainer.style = "display:none;";
+    if(recorderStatus.recording){
+        $('#pubControl'  ).hide();
+        $('#pubProgress' ).hide();
+        $('#pubRecording').show();
+    } else if (publisherStatus.status){
+        $('#pubControl'  ).hide();
+        $('#pubRecording').hide();
+        $('#pubProgress' ).show();
+        $('#pubCurrentProgress').css('width',(publisherStatus.complete*100)+"%;");
+        $('#pubProgressText').html(publisherStatus.status);
     } else {
-        guiElements.controlContainer.style = "display:none;";
-        guiElements.progressContainer.style = "";
-        
-        guiElements.currentProgress.style = "width:"+(publisherStatus.complete*100)+"%;";
-        guiElements.progressText.innerHTML = publisherStatus.status;
+        $('#pubRecording').hide();
+        $('#pubProgress' ).hide();
+        $('#pubControl'  ).show();
     }
     
     if(publisherStatus.lastDiscStatus==3) {
@@ -757,36 +758,58 @@ function deleteFromPublishList(element){
     
 }
 
+//Change ext in textbox
+function tcodeFmt(src, extLbl) {
+    if (publisherTranscodeOptions[$( src ).val()].filetype){
+        $('#'+extLbl).text('.'+publisherTranscodeOptions[$( src ).val()].filetype);
+    } else {
+        var extSplit = $('#publishFileList li div').text().split('.');
+        $('#'+extLbl).text('.'+extSplit[extSplit.length-1]);
+    }
+}
+
 function burnDisc(resume){
     
     var fileList = [];
     $('#publishFileList li div').each(function() {
-        fileList.push($( this ).html());
+        fileList.push($( this ).text());
     });
     
     var menu = $('#discMenuList').val();
     
-    socket.emit('publisher_burnDisc', {resume:resume, menu:menu, sourceFNames:fileList});
+    socket.emit('publisher_burnDisc', {resume:resume, sourceFNames:fileList, menu:menu});
 }
 
 function uploadFile(resume){
     
     var fileList = [];
     $('#publishFileList li div').each(function() {
-        fileList.push($( this ).html());
+        fileList.push($( this ).text());
     });
     
-    socket.emit('publisher_uploadFile', {resume:resume, sourceFNames:fileList,destFName:guiElements.uploadOutName.value,transcode:true,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
+    var uri =   $("#uploadURI"    ).val();
+    var user =  $("#uploadUser"   ).val();
+    var pwd =   $("#uploadPwd"    ).val();
+    var fname = $("#uploadOutName").val();
+    var tcode = publisherTranscodeOptions[$('uploadTranscode').val()];
+    
+    socket.emit('publisher_uploadFile', { resume:resume,sourceFNames:fileList,destFName:fname,
+                                        transcode:tcode,server:uri,username:user,password:pwd});
 }
 
 function copyFile(resume){
     
     var fileList = [];
     $('#publishFileList li div').each(function() {
-        fileList.push($( this ).html());
+        fileList.push($( this ).text());
     });
     
-    socket.emit('publisher_copyFile', {resume:resume, sourceFNames:fileList,destFName:guiElements.uploadOutName.value,transcode:true,server:guiElements.uploadURI.value,username:guiElements.uploadUser.value,password:guiElements.uploadPwd.value});
+    var uri =   $("#fileDestDevice").val();
+    var fname = $("#fileOutName"   ).val();
+    var tcode = publisherTranscodeOptions[$('fileTranscode').val()];
+    
+    socket.emit('publisher_copyFile', { resume:resume,sourceFNames:fileList,destFName:fname,
+                                        transcode:tcode,device:uri});
 }
 
 function cancelPublish(){
@@ -806,7 +829,7 @@ function connectServer(){
         'reconnection': true,
         'reconnectionDelay': 1000,
         'reconnectionDelayMax' : 5000,
-    'reconnectionAttempts': Number.MAX_VALUE
+        'reconnectionAttempts': Number.MAX_VALUE
     });    
 
     //connect socket events
@@ -919,9 +942,6 @@ function setupGui(){
     guiElements.mainPages = document.getElementsByClassName("indexPage");
     guiElements.mainTabs = document.getElementsByClassName("indexTab");
     
-    guiElements.recordBtn = document.getElementById("recordBtn");
-    guiElements.stopBtn = document.getElementById("stopBtn");
-    
     guiElements.mediaPause = document.getElementById("mediaPause");
     guiElements.mediaStop = document.getElementById("mediaStop");
     guiElements.mediaSelect = document.getElementById("mediaSelect");
@@ -929,12 +949,6 @@ function setupGui(){
     guiElements.mediaStartPosM = document.getElementById("mediaStartPosM");
     guiElements.mediaStartPosS = document.getElementById("mediaStartPosS");
     
-    guiElements.publishPages = document.getElementsByClassName("publishPage");
-    guiElements.publishTabs = document.getElementsByClassName("publishTab");
-    guiElements.controlContainer = document.getElementById("controls");
-    guiElements.progressContainer = document.getElementById("progress");
-    guiElements.sourceFileList = document.getElementById("sourceFileList");
-    guiElements.publishFileList = document.getElementById("publishFileList");
     guiElements.burnerStartBtn = document.getElementById("burnerStartBtn");
     guiElements.fileStartBtn = document.getElementById("fileStartBtn");
     
@@ -943,8 +957,6 @@ function setupGui(){
     guiElements.uploadPwd = document.getElementById("uploadPwd");
     guiElements.uploadOutName = document.getElementById("uploadOutName");
     guiElements.uploadStartBtn = document.getElementById("uploadStartBtn");
-    guiElements.progressText = document.getElementById("progressText");
-    guiElements.currentProgress = document.getElementById("currentProgress");
     
     
     //Populate mixer placeholders

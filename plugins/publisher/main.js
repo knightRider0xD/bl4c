@@ -65,7 +65,7 @@ sio_hooks.push({event:'uploadFile', callback:function(uploadInfo){
 }});
 
 sio_hooks.push({event:'copyFile', callback:function(copyInfo){
-    publishFTP(copyInfo.sourceFNames, copyInfo.destFName, copyInfo.transcode, copyInfo.path, copyInfo.resume);
+    publishRemovableDrive(copyInfo.sourceFNames, copyInfo.destFName, copyInfo.transcode, copyInfo.path, copyInfo.resume);
 }});
 
 sio_hooks.push({event:'cancel', callback:function(){
@@ -158,7 +158,7 @@ function setupDirs(root, names, callback){
 }
 
 // Transcode Videos
-function transcodeVideo(srcFiles, vc, vb, ac, ab, destFile, completeInc, callback){
+function transcodeVideo(srcFiles, vf, vr, vc, vb, ac, ab, destFile, completeInc, callback){
     
     if(exiting){return;}
     
@@ -196,10 +196,18 @@ function transcodeVideo(srcFiles, vc, vb, ac, ab, destFile, completeInc, callbac
     }
     
     var args = [];
-    if(vc.endsWith('dvd')){
-        args = inputArgs.concat(['-target', vc, '-aspect', '16:9', destFile]);
+    if(vf.endsWith('dvd')){
+        args = inputArgs.concat(['-target', vf, '-aspect', '16:9', destFile]);
     } else {
-        args = inputArgs.concat(['-c:v', vc, '-b:v', vb, '-c:a', ac, '-b:a', ab, destFile]);
+        args = inputArgs;
+        //build args
+        if(vf){args = args.concat(['-vf',  vf]);}
+        if(vr){args = args.concat(['-r',   vr]);}
+        if(vc){args = args.concat(['-c:v', vc]);}
+        if(vb){args = args.concat(['-b:v', vb]);}
+        if(ac){args = args.concat(['-c:a', ac]);}
+        if(ab){args = args.concat(['-b:a', ab]);}
+        args = args.concat([destFile]);
     }
     
     publisher = spawn('ffmpeg', args, {cwd: process.cwd(), env: process.env, detached: true});
@@ -741,7 +749,7 @@ function publishDisc(sourceFNames, menuFName, resume){
     
     var cb_transcode = function () {
         if (currentTcIndex < sourceFNames.length) {
-            transcodeVideo([sourceFNames[currentTcIndex]], 'pal-dvd', '', '', '', 'publishing/disc_working/vid'+currentTcIndex+'.mpg', (0.5/sourceFNames.length), cb_transcode);
+            transcodeVideo([sourceFNames[currentTcIndex]], 'pal-dvd', '', '', '', '', '', 'publishing/disc_working/vid'+currentTcIndex+'.mpg', (0.5/sourceFNames.length), cb_transcode);
             transcodedFiles.push('vid'+currentTcIndex+'.mpg');
             currentTcIndex++;
         } else {
@@ -816,8 +824,8 @@ function publishFTP(sourceFNames, destFName, transcode, server, username, passwo
     };
     
     var cb_transcode = function () {
-        transcodeVideo(sourceFNames, 'libx264', '6000k', 'aac', '160k', 'publishing/file_working/'+destFName+'.mp4', 0.5, cb_uploadFile);
-        transcodedFiles.push('publishing/file_working/'+destFName+'.mp4');
+        transcodeVideo(sourceFNames, transcode.vFormat, transcode.vFRate, transcode.vCodec, transcode.vBitrate, transcode.aCodec, transcode.aBitrate, 'publishing/file_working/'+destFName+'.'+transcode.filetype, 0.5, cb_uploadFile);
+        transcodedFiles.push('publishing/file_working/'+destFName+'.'+transcode.filetype);
         return;
     };
     
@@ -830,7 +838,7 @@ function publishFTP(sourceFNames, destFName, transcode, server, username, passwo
     };
     
     var cb_setupDirs = function () {
-        if (transcode) {
+        if (transcode.filetype) {
             setupDirs('publishing/', ['file_working'], cb_transcode);
         } else {
             setupDirs('publishing/', ['file_working'], cb_noTranscode);
@@ -916,8 +924,8 @@ function publishRemovableDrive(sourceFNames, destFName, transcode, path, resume)
     };
     
     var cb_transcode = function () {
-        transcodeVideo(sourceFNames, 'libx264', '6000k', 'aac', '160k', 'publishing/file_working/'+destFName+'.mp4', 0.5, cb_copyFile);
-        transcodedFiles.push('publishing/file_working/'+destFName+'.mp4');
+        transcodeVideo(sourceFNames, transcode.vFormat, transcode.vFRate, transcode.vCodec, transcode.vBitrate, transcode.aCodec, transcode.aBitrate, 'publishing/file_working/'+destFName+'.'+transcode.filetype, 0.5, cb_copyFile);
+        transcodedFiles.push('publishing/file_working/'+destFName+'.'+transcode.filetype);
         return;
     };
     
@@ -930,7 +938,7 @@ function publishRemovableDrive(sourceFNames, destFName, transcode, path, resume)
     };
     
     var cb_setupDirs = function () {
-        if (transcode) {
+        if (transcode.filetype) {
             setupDirs('publishing/', ['file_working'], cb_transcode);
         } else {
             setupDirs('publishing/', ['file_working'], cb_noTranscode);

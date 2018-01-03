@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="styles/index.css">
   <script src="scripts/jquery.min.js"></script>
   <script src="bootstrap/bootstrap.min.js"></script>
-  <script src="scripts/hammer.min.js"></script>
   <script src="socket.io/socket.io.js"></script>
   <script src="scripts/index.io.js"></script>
 </head>
@@ -263,7 +262,7 @@
         
     </div>
     <hr style="margin:4px;" />
-    <div class="row" id="controls" >
+    <div class="row" id="pubControl" >
         <div class="col-md-4 col-sm-4 hidden-xs">
             <h4>SOURCE FILES</h4>
             <row>
@@ -277,9 +276,9 @@
             
             <div class="row">
                 <ul class="nav nav-pills nav-pills-info nav-justified nav-lg">
-                    <li role="presentation" class="publishTab active"><a href="#" onclick="guiPublishPageSwitcher(0);return false;">Burn DVD</a></li>
-                    <li role="presentation" class="publishTab"><a href="#" onclick="guiPublishPageSwitcher(1);return false;">File Copy</a></li>
-                    <li role="presentation" class="publishTab"><a href="#" onclick="guiPublishPageSwitcher(2);return false;">FTP Upload</a></li>
+                    <li role="presentation" class="publish-tab tab-dvd active"><a href="#" onclick="guiPublishPageSwitcher('dvd');return false;">Burn DVD</a></li>
+                    <li role="presentation" class="publish-tab tab-usb"><a href="#" onclick="guiPublishPageSwitcher('usb');return false;">File Copy</a></li>
+                    <li role="presentation" class="publish-tab tab-ftp"><a href="#" onclick="guiPublishPageSwitcher('ftp');return false;">FTP Upload</a></li>
                 </ul>
             </div>
         
@@ -294,7 +293,7 @@
             </div>
             <hr style="margin:4px;" />
 
-            <div class="publishPage row">
+            <div class="publish-page page-dvd row">
                 <div>
                     <div class="col-md-3 col-sm-3">
                         <p>Select Disc Menu</p>
@@ -302,7 +301,7 @@
                     <div class="col-md-9 col-sm-9">
                         <select id="discMenuList" class="form-control" style="width:100%">
                             <option value="0">No Menu</option>
-                            <option value="menu01.mpg" selected="true">Main Logo Menu</option>
+                            <option value="menu01.mpg" selected="selected">Main Logo Menu</option>
                         </select>
                     </div>
                 </div>
@@ -319,14 +318,34 @@
                 </div>
             </div>
             
-            <div class="publishPage row" style="display:none;">
+            <div class="publish-page page-usb row" style="display:none;">
                 <div>
                     <div class="col-md-3 col-sm-3">
                         <p>Select Output Device</p>
                     </div>
                     <div class="col-md-9 col-sm-9">
-                        <select id="sourceFileList" class="form-control" style="width:100%">
+                        <select id="fileDestDevice" class="form-control" style="width:100%">
                     
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div class="col-md-3 col-sm-3">
+                        <p>Select Output Format</p>
+                    </div>
+                    <div class="col-md-9 col-sm-9">
+                        <select id="fileTranscode" class="form-control" style="width:100%" onchange="tcodeFmt(this,'fileOutExt')">
+                            <option value=0>Original</option>
+                            <option disabled="disabled"></option>
+                            <option value=1>MP4 1080p25</option>
+                            <option value=2 selected="selected">MP4  720p25</option>
+                            <option value=3>MP4  540p25</option>
+                            <option value=4>MP4  360p25</option>
+                            <option disabled="disabled"></option>
+                            <option value=5>MP3  320k</option>
+                            <option value=6>MP3  160k</option>
+                            <option value=7>MP3   96k</option>
+                            <option value=8>MP3   64k</option>
                         </select>
                     </div>
                 </div>
@@ -336,8 +355,8 @@
                     </div>
                     <div class="col-md-9 col-sm-9">
                         <div class="input-group">
-                            <input type="text" id="uploadOutName" class="form-control" placeholder="filename" aria-describedby="basic-addon2">
-                            <span class="input-group-addon" id="basic-addon2">.mp4</span>
+                            <input type="text" id="fileOutName" class="form-control" placeholder="filename" aria-describedby="basic-addon2">
+                            <span id="fileOutExt" class="input-group-addon" id="basic-addon2">.mp4</span>
                         </div>
                     </div>
                 </div>
@@ -354,7 +373,7 @@
                 </div>
             </div>
             
-            <div class="publishPage row" style="display:none;">
+            <div class="publish-page page-ftp row" style="display:none;">
                 <div>
                     <div class="col-md-3 col-sm-3">
                         <p>Server URI</p>
@@ -381,13 +400,33 @@
                     </div>
                 </div>
                 <div>
+                <div class="col-md-3 col-sm-3">
+                        <p>Select Output Format</p>
+                    </div>
+                    <div class="col-md-9 col-sm-9">
+                        <select id="uploadTranscode" class="form-control" style="width:100%" onchange="tcodeFmt(this,'uploadOutExt')">
+                            <option value=0>Original</option>
+                            <option disabled="disabled"></option>
+                            <option value=1>MP4 1080p25</option>
+                            <option value=2 selected="selected">MP4  720p25</option>
+                            <option value=3>MP4  540p25</option>
+                            <option value=4>MP4  360p25</option>
+                            <option disabled="disabled"></option>
+                            <option value=5>MP3  320k</option>
+                            <option value=6>MP3  160k</option>
+                            <option value=7>MP3   96k</option>
+                            <option value=8>MP3   64k</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
                     <div class="col-md-3 col-sm-3">
                         <p>Output Filename</p>
                     </div>
                     <div class="col-md-9 col-sm-9">
                         <div class="input-group">
                             <input type="text" id="uploadOutName" class="form-control" placeholder="filename" aria-describedby="basic-addon2">
-                            <span class="input-group-addon" id="basic-addon2">.mp4</span>
+                            <span id="uploadOutExt" class="input-group-addon" id="basic-addon2">.mp4</span>
                         </div>
                     </div>
                 </div>
@@ -408,23 +447,23 @@
         </div>
     
     </div>
-    <div class="row" id="progress" style="display:none;">
+    <div class="row" id="pubProgress" style="display:none;">
         <div class="col-md-12 col-sm-12">
             <h4>PUBLISHING IN PROGRESS...</h4>
         </div>
         <div class="col-md-10 col-sm-10">
             <br />
             <div class="progress" style="position: relative;">
-                <div id="currentProgress" class="progress-bar progress-bar-primary progress-bar-striped active" role="progressbar" style="width:0%;"></div>
+                <div id="pubCurrentProgress" class="progress-bar progress-bar-primary progress-bar-striped active" role="progressbar" style="width:0%;"></div>
             </div>
-            <div id="progressText" style="width:100%; text-align:center;"></div>
+            <div id="pubProgressText" style="width:100%; text-align:center;"></div>
         </div>
         <div class="col-md-2 col-sm-2">
             <button type="button" id="cancelBtn" class="btn btn-lg btn-danger" onclick="cancelPublish()" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;">CANCEL</button>
         </div>
         
     </div>
-    <div class="row" id="recording" style="display:none;">
+    <div class="row" id="pubRecording" style="display:none;">
         <div class="col-md-12 col-sm-12">
             <h4>RECORDING IN PROGRESS...</h4>
             <p>System unable to publish while recording</p>
