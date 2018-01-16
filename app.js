@@ -19,6 +19,11 @@ config.defaults({
         "http_port": 8080,
         "live_stream": 5000
     },
+    "resources": {
+        'hdd':1,
+        'odd':1,
+        'display':1
+    },
     "http": {
         "port": 8080
     },
@@ -29,6 +34,9 @@ config.defaults({
 
 //
 var plugins = {};
+
+//
+var resources = config.get('resources');
 
 // global vars
 var exiting = 0;
@@ -91,6 +99,18 @@ PluginConnector.prototype.doSioEmit = function(signalName, value) {
     io.emit(this.pluginName+'_'+signalName, value);
 }
 
+// Emit signal to sockets at particular IP addresses
+PluginConnector.prototype.doSioEmitTarget = function(addresses, signalName, value) {
+    if(!addresses.isArray()){
+        return;
+    }
+    for(var i=0; i<sioSockets.length; i++){
+        if (addresses.indexOf(sioSockets[i].handshake.address) >= 0){
+            sioSockets[i].emit(this.pluginName+'_'+signalName, value);
+        }
+    }
+}
+
 PluginConnector.prototype.getConfig = function(key) {
     if (key === undefined){
         return config.get(this.pluginName);
@@ -120,6 +140,28 @@ PluginConnector.prototype.getGlobalConfig = function(key) {
         return config.get('global');
     } else {
         return config.get('global:'+key);
+    }
+}
+
+PluginConnector.prototype.checkResource = function(resourceName) {
+    return resources[resourceName] == '';
+}
+
+PluginConnector.prototype.acquireResource = function(resourceName) {
+    if(resources[resourceName] == ''){
+        resources[resourceName] = this.pluginName;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+PluginConnector.prototype.releaseResource = function(resourceName) {
+    if(resources[resourceName] == this.pluginName){
+        resources[resourceName] = '';
+        return true;
+    } else {
+        return false;
     }
 }
 

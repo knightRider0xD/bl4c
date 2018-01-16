@@ -1,16 +1,19 @@
-var publisher = 0;
-var publisherTimer = 0;
+var publisher       = 0;
+var publisherTimer  = 0;
 var publisherStatus = {status:0,complete:0,locked:0,lastDiscStatus:0,lastFileStatus:0};
-var publisherFiles = [];
-var currentTcIndex = 0;
+var publisherFiles  = [];
+var currentTcIndex  = 0;
 var transcodedFiles = [];
-var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
-var spawn  = require('child_process').spawn;
-var system = null;
-var sio_hooks = [];
+var destFile        = '';
+var recorderStatus  = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
+var spawn           = require('child_process').spawn;
+var fs              = require('fs');
+var system          = null;
+var exiting         = 0;
+var sio_hooks       = [];
 
 var config = {
-        "files_dir": "/home/user/recordings/"
+        "files_dir": "/home/user/recordings/",
         "working_dir": "/home/user/working/",
         "disc_drive": "/dev/sr0",
         "flash_disk_dir": "/run/media/user/",
@@ -26,6 +29,14 @@ exports.load = function (main_sys) {
     system.setConfigDefaults(config);
     config = system.getConfig();
     
+    if (!config.files_dir.endsWith('/')){
+        config.files_dir += '/';
+    }
+    
+    if (!config.flash_disk_dir.endsWith('/')){
+        config.flash_disk_dir += '/';
+    }
+    
     publisherStatus.lastDiscStatus = config.disc_status;
     publisherStatus.lastFileStatus = config.file_status;
     
@@ -38,6 +49,7 @@ exports.load = function (main_sys) {
     }
     
     reloadAvailableFiles();
+    reloadFlashDisks();
     
 }
 
@@ -55,17 +67,22 @@ exports.notify = function (signalName, value) {
 sio_hooks.push({event:'getFileList', callback:function(){
     reloadAvailableFiles();
 }});
+
+sio_hooks.push({event:'getRemovableList', callback:function(){
+    reloadFlashDisks();
+}});
  
 sio_hooks.push({event:'burnDisc', callback:function(discInfo){
     publishDisc(discInfo.sourceFNames, discInfo.menu, discInfo.resume);
 }});
 
 sio_hooks.push({event:'uploadFile', callback:function(uploadInfo){
-    publishFTP(uploadInfo.sourceFNames, uploadInfo.destFName, uploadInfo.transcode, uploadInfo.server, uploadInfo.username, uploadInfo.password, uploadInfo.resume);
+    publishUpload(uploadInfo.sourceFNames, uploadInfo.destFName, uploadInfo.transcode, uploadInfo.protocol, uploadInfo.server, uploadInfo.username, uploadInfo.password, uploadInfo.resume);
 }});
 
 sio_hooks.push({event:'copyFile', callback:function(copyInfo){
-    publishRemovableDrive(copyInfo.sourceFNames, copyInfo.destFName, copyInfo.transcode, copyInfo.path, copyInfo.resume);
+    console.log(JSON.stringify(copyInfo));
+    publishRemovableDrive(copyInfo.sourceFNames, copyInfo.destFName, copyInfo.transcode, config.flash_disk_dir+copyInfo.device, copyInfo.resume);
 }});
 
 sio_hooks.push({event:'cancel', callback:function(){
@@ -73,7 +90,6 @@ sio_hooks.push({event:'cancel', callback:function(){
 }});
 
 
-//TODO
 function reloadAvailableFiles(){
     
     fs.readdir(config.files_dir, function (err, files) {
@@ -91,31 +107,37 @@ function reloadAvailableFiles(){
 // Clean Working Directories
 function cleanDirs(root, names, callback){
     
-    if(exiting){return;}
+    if(exiting){
+        exiting = 0;
+        return;
+    }
 
     if (!root.endsWith('/')){
         root = root + '/';
     }
     
-    for (var i = 0; i < names.length; i++) {
+    /*for (var i = 0; i < names.length; i++) {
         names[i] = root+names[i];
-    }
+    }*/
     
-    publisher = spawn('rm', ['-rf'].concat(names),{cwd: process.cwd(), env: process.env, detached: true});
+    publisher = spawn('rm', ['-rf'].concat(names),{cwd: root, env: process.env, detached: true});
     
     console.log('Publisher: Remove old files');
-    publisherStatus.status = "Clearing old files";
-    system.doSioEmit('update', publisherStatus);
 
     publisher.on('error', function (err) {
+        exiting = 1;
         console.log('Error cleaning Working Directories: '+err);
+        publisherStatus.status = 'Error cleaning old files';
+        publisherStatus.complete = -1;
+        system.doSioEmit('update', publisherStatus);
+        finished(true);
         publisher.kill('SIGTERM');
     });
 
     publisher.on('exit', function (code) {
-        publisher.kill('SIGKILL');
         publisher = 0;
         if(exiting){
+            exiting = 0;
             return;
         }
         callback();
@@ -126,31 +148,33 @@ function cleanDirs(root, names, callback){
 // Create Working Directories
 function setupDirs(root, names, callback){
     
-    if(exiting){return;}
+    if(exiting){
+        exiting = 0;
+        return;
+    }
     
     if (!root.endsWith('/')){
         root = root + '/';
     }
     
-    for (var i = 0; i < names.length; i++) {
-        names[i] = root+names[i];
-    }
-    
-    publisher = spawn('mkdir', ['-p'].concat(names),{cwd: process.cwd(), env: process.env, detached: true});
+    publisher = spawn('mkdir', ['-p'].concat(names),{cwd: root, env: process.env, detached: true});
     
     console.log('Publisher: Setup new folders');
-    publisherStatus.status = "Initialising";
-    system.doSioEmit('update', publisherStatus);
 
     publisher.on('error', function (err) {
+        exiting = 1;
         console.log('Error creating Working Directories: '+err);
+        publisherStatus.status = 'Error setting up working folders';
+        publisherStatus.complete = -1;
+        system.doSioEmit('update', publisherStatus);
+        finished(true);
         publisher.kill('SIGTERM');
     });
 
     publisher.on('exit', function (code) {
-        publisher.kill('SIGKILL');
         publisher = 0;
         if(exiting){
+            exiting = 0;
             return;
         }
         callback();
@@ -158,56 +182,67 @@ function setupDirs(root, names, callback){
 }
 
 // Transcode Videos
-function transcodeVideo(srcFiles, vf, vr, vc, vb, ac, ab, destFile, completeInc, callback){
+function transcodeVideo(srcFiles, mType, vf, vr, vc, vb, ac, ab, destFile, completeInc, callback){
     
-    if(exiting){return;}
+    if(exiting){
+        exiting = 0;
+        return;
+    }
     
     var statusCompleteInitial = publisherStatus.complete;
 
-    var inputArgs = [];
+    var args = [];
     if(srcFiles.length<1){
         publisherStatus.status = "Too few files. Cancelling";
-        publisherStatus.complete = 1;
+        publisherStatus.complete = -1;
         system.doSioEmit('update', publisherStatus);
-        setTimeout(function(){
-                publisherStatus.status = 0;
-                publisherStatus.complete = 0;
-                system.doSioEmit('update', publisherStatus);
-        }, 4000);
+        finished(true);
         return;
-    } else if(srcFiles.length==1){
-        inputArgs = ['-i', recordDir+srcFiles[0]];
+    }
+    for (var i = 0; i < srcFiles.length; i++) {
+        args.push('-i');
+        args.push(config.files_dir+srcFiles[i]);
+    }
+    if(srcFiles.length==1){
+        if(mType == 'audio'){
+            args.push('-vn');
+        } else if(mType == 'video' && vf){
+            args.push('-vf');
+            args.push(vf);
+        }
     } else {
-        for (var i = 0; i < srcFiles.length; i++) {
-            inputArgs.push('-i');
-            inputArgs.push(recordDir+srcFiles[i]);
+        args.push('-filter_complex');
+        var filter = '';
+        if(mType == 'audio'){
+            filter += 'concat=n='+srcFiles.length+':v=0:a=1[a]';
+            args = args.concat([filter, '-map', '[a]']);
+        } else if(mType == 'video'){
+            if(vf){
+                filter += 'concat=n='+srcFiles.length+':v=1:a=1[vx][a]; [vx]'+vf+'[v]';
+            } else {
+                filter += 'concat=n='+srcFiles.length+':v=1:a=1[v][a]';
+            }
+            args = args.concat([filter, '-map', '[v]', '-map', '[a]']);
+        } else if(mType == 'dvd'){
+            filter += 'concat=n='+srcFiles.length+':v=1:a=1[v][a]';
+            args = args.concat([filter, '-map', '[v]', '-map', '[a]']);
         }
-        inputArgs.push('-filter_complex');
-        var concats = '';
-        for (var i = 0; i < srcFiles.length; i++) {
-            concats = concats + '[i:0] [i:1] ';
-        }
-        concats = concats + 'concat=n='+str(i)+':v=1:a=1 [v] [a]';
-        inputArgs.push(concats);
-        inputArgs.push('-map');
-        inputArgs.push("'[v]'");
-        inputArgs.push('-map');
-        inputArgs.push("'[a]'");
     }
     
-    var args = [];
-    if(vf.endsWith('dvd')){
-        args = inputArgs.concat(['-target', vf, '-aspect', '16:9', destFile]);
-    } else {
-        args = inputArgs;
-        //build args
-        if(vf){args = args.concat(['-vf',  vf]);}
+    if(mType == 'audio'){
+        args = args.concat(['-vn']);
+        if(ac){args = args.concat(['-c:a', ac]);}
+        if(ab){args = args.concat(['-b:a', ab]);}
+        args = args.concat([destFile]);
+    } else if(mType == 'video'){
         if(vr){args = args.concat(['-r',   vr]);}
         if(vc){args = args.concat(['-c:v', vc]);}
         if(vb){args = args.concat(['-b:v', vb]);}
         if(ac){args = args.concat(['-c:a', ac]);}
         if(ab){args = args.concat(['-b:a', ab]);}
         args = args.concat([destFile]);
+    } else if(mType == 'dvd'){
+        args = args.concat(['-target', vf, '-aspect', '16:9', destFile]);
     }
     
     publisher = spawn('ffmpeg', args, {cwd: process.cwd(), env: process.env, detached: true});
@@ -219,25 +254,31 @@ function transcodeVideo(srcFiles, vf, vr, vc, vb, ac, ab, destFile, completeInc,
     var duration = 0;
 
     publisher.on('error', function (err) {
-        console.log('Error Transcoding File: '+err);
+        exiting = 1;
+        console.log('Error Transcoding '+srcFiles.toString()+': '+err);
+        publisherStatus.status = 'Error Transcoding '+srcFiles.toString();
+        publisherStatus.complete = -1;
+        system.doSioEmit('update', publisherStatus);
+        finished(true);
         publisher.kill('SIGTERM');
     });
     
     publisher.stderr.on('data', function (data) {
+        //console.log(String(data));
         var output = String(data).split("\n");
         for (var i = 0; i < output.length; i++) {
             var tIndex = output[i].indexOf('time=');
             if(tIndex>=0){
                 //Parse time as date object from line
-                var d = new Date("T"+output[i].match(/[0-9][0-9](:[0-9][0-9])+/g)+"Z");
-                publisherStatus.status = "Transcoding "+srcFiles.toString()+": "+(d.valueOf()*100/duration)+"%";
+                var d = new Date("1970-01-01T"+output[i].match(/[0-9][0-9](:[0-9][0-9])+/g)+"Z");
+                publisherStatus.status = "Transcoding "+srcFiles.toString()+": "+(Math.round(d.valueOf()*100/duration))+"%";
                 publisherStatus.complete = statusCompleteInitial+((d.valueOf()/duration)*completeInc*0.9);
                 continue;
             } else {
                 tIndex = output[i].indexOf('Duration: ');
                 if(tIndex>=0){
                     //Parse duration as date object from line
-                    var d = new Date("T"+output[i].match(/[0-9][0-9](:[0-9][0-9])+/g)+"Z");
+                    var d = new Date("1970-01-01T"+output[i].match(/[0-9][0-9](:[0-9][0-9])+/g)+"Z");
                     duration += d.valueOf();
                 }
             }
@@ -246,12 +287,11 @@ function transcodeVideo(srcFiles, vf, vr, vc, vb, ac, ab, destFile, completeInc,
     });
 
     publisher.on('exit', function (code) {
-        publisher.kill('SIGKILL');
         publisher = 0;
         if(exiting){
+            exiting = 0;
             return;
         }
-        system.doSioEmit('update', publisherStatus);
         callback();
     });
 }
@@ -259,12 +299,12 @@ function transcodeVideo(srcFiles, vf, vr, vc, vb, ac, ab, destFile, completeInc,
 // Generate DVDAuthor XML
 function generateXML(files, menuFile, callback){
     
-    if(exiting){return;}
+    if(exiting){
+        exiting = 0;
+        return;
+    }
     
     console.log('Configuring Disc');
-    publisherStatus.status = "Configuring Disc";
-    publisherStatus.complete = 0.4;
-    system.doSioEmit('update', publisherStatus);
     
     var dvd_xml =   '<dvdauthor dest="../disc_fs">\n'+
                     '    <vmgm>\n'+
@@ -293,8 +333,16 @@ function generateXML(files, menuFile, callback){
                     '</dvdauthor>'
     
     fs.writeFile('publishing/disc_working/control.xml', dvd_xml, function (err) {
+        if(exiting){
+            exiting = 0;
+            return;
+        }
         if (err) {
-    console.log(err);
+            console.log('Error Generating Disc XML: '+err);
+            publisherStatus.status = 'Error Generating Disc XML';
+            publisherStatus.complete = -1;
+            system.doSioEmit('update', publisherStatus);
+            finished(true);
             return;
         }
         callback();
@@ -305,13 +353,14 @@ function generateXML(files, menuFile, callback){
 // DVDAuthor TS
 function generateTS(callback){
     
-    if(exiting){return;}
+    if(exiting){
+        exiting = 0;
+        return;
+    }
     
     publisher = spawn('dvdauthor', ['-x', 'control.xml'],{cwd: process.cwd()+'/publishing/disc_working', env: process.env, detached: true});
     
     console.log('Compiling Disc Contents');
-    publisherStatus.status = "Compiling Disc Contents";
-    publisherStatus.complete = 0.4;
     system.doSioEmit('update', publisherStatus);
 
 
@@ -324,18 +373,21 @@ function generateTS(callback){
     });
     
     publisher.on('error', function (err) {
+        exiting = 1;
         console.log('Disc Creation Failed. Error Generating Titles: '+err);
+        publisherStatus.status = 'Error Generating Disc Titles';
+        publisherStatus.complete = -1;
+        system.doSioEmit('update', publisherStatus);
+        finished(true);
         publisher.kill('SIGTERM');
     });
 
     publisher.on('exit', function (code) {
-        publisher.kill('SIGKILL');
         publisher = 0;
         if(exiting){
+            exiting = 0;
             return;
         }
-        publisherStatus.complete = 0.45;
-        system.doSioEmit('update', publisherStatus);
         callback();
     });
 }
@@ -345,7 +397,10 @@ function prepOutput(callback){
     
     publisherTimer = 0;
     
-    if(exiting){return;}
+    if(exiting){
+        exiting = 0;
+        return;
+    }
     
     if(!config.burn_disc){
         callback();
@@ -356,9 +411,6 @@ function prepOutput(callback){
     publisher = spawn('isoinfo', ['-d', '-i', config.disc_drive],{cwd: process.cwd(), env: process.env, detached: true});
     
     console.log('Waiting for disc');
-    publisherStatus.status = "Waiting for disc";
-    publisherStatus.complete = 0.49;
-    system.doSioEmit('update', publisherStatus);
     
     publisher.stdout.on('data', function (data) {
         isoinfoOutput += "\n" + data;
@@ -369,15 +421,15 @@ function prepOutput(callback){
     });
     
     publisher.on('exit', function (code) {
-        publisher.kill('SIGKILL');
         publisher = 0;
         if(exiting){
+            exiting = 0;
             return;
         }
         if(isoinfoOutput.indexOf("Seek error")<0){
             console.log('No blank disc found, please insert one & press resume.');
+            publisherStatus.complete = -0.5
             publisherStatus.status = "No blank disc found, please insert one & press resume";
-            publisherStatus.complete = 0.49;
             system.doSioEmit('update', publisherStatus);
         } else {
             callback();
@@ -388,7 +440,10 @@ function prepOutput(callback){
 // Write Output to Disc
 function writeOutput(completeInc, callback){
     
-    if(exiting){return;}
+    if(exiting){
+        exiting = 0;
+        return;
+    }
     
     var statusCompleteInitial = publisherStatus.complete;
     
@@ -406,7 +461,12 @@ function writeOutput(completeInc, callback){
     system.doSioEmit('update', publisherStatus);
 
     publisher.on('error', function (err) {
-        console.log('Disc Creation Failed:'+err);
+        exiting = 1;
+        console.log('Disc Creation Failed. Error Burning: '+err);
+        publisherStatus.status = 'Error Burning Disc';
+        publisherStatus.complete = -1;
+        system.doSioEmit('update', publisherStatus);
+        finished(true);
         publisher.kill('SIGTERM');
     });
     
@@ -415,7 +475,7 @@ function writeOutput(completeInc, callback){
         var output = String(data).split("\n");
         for (var i = 0; i < output.length; i++) {
             if(output[i].indexOf('done, estimate finish')>=0){
-                var percentStr = output[i].match(/[0-9]+.[0-9]*%/g)+'';
+                var percentStr = output[i].match(/[0-9]+.*[0-9]*%/g)+'';
                 var valStr = percentStr.substr(0, percentStr.length-1);
                 var val = parseFloat(valStr);
                 publisherStatus.status = "Burning Disc: "+percentStr;
@@ -426,103 +486,128 @@ function writeOutput(completeInc, callback){
     });
 
     publisher.on('exit', function (code) {
-        publisher.kill('SIGKILL');
         publisher = 0;
         if(exiting){
+            exiting = 0;
             return;
         }
-        console.log('Complete');
-        publisherStatus.status = "Complete";
-        publisherStatus.complete = 1;
-        system.doSioEmit('update', publisherStatus);
+        console.log('Buring Complete');
         callback();
     });
 }
 
 
 // Send to FTP Server
-function uploadFile(file, server, username, password, callback){
+function uploadFile(file, server, username, password, completeInc, callback){
     
-    if(exiting){return;}
+    if(exiting){
+        exiting = 0;
+        return;
+    }
     
-    publisher = spawn('curl',['-T',file, (server.indexOf('ftp://')==0 ? server : 'ftp://'+server), '--user', username+':'+password],{cwd: process.cwd(), env: process.env, detached: true});
+    var statusCompleteInitial = publisherStatus.complete;
+    
+    publisher = spawn('curl',['--progress-bar','-T',file, server, '--user', username+':'+password],{cwd: process.cwd(), env: process.env, detached: true});
     
     console.log('Uploading File');
     publisherStatus.status = "Uploading File";
-    publisherStatus.complete = 0.5;
+    statusCompleteInitial += (completeInc*0.1);
+    publisherStatus.complete = statusCompleteInitial;
     system.doSioEmit('update', publisherStatus);
 
     publisher.on('error', function (err) {
+        exiting = 1;
         console.log('File Upload Failed:'+err);
+        publisherStatus.status = 'Error Uploading File';
+        publisherStatus.complete = -1;
+        system.doSioEmit('update', publisherStatus);
+        finished(true);
         publisher.kill('SIGTERM');
     });
     
     publisher.stderr.on('data', function (data) {
         var output = String(data).split("\n");
         for (var i = 0; i < output.length; i++) {
-            publisherStatus.status = "Uploading File: "+output[i]+"&#37;";
+            var percentStr = output[i].match(/[0-9]+.[0-9]+%/g)+'';
+            var valStr = percentStr.substr(0, percentStr.length-1);
+            var val = parseFloat(valStr);
+            if(val){
+                publisherStatus.status = "Uploading File: "+percentStr;
+                publisherStatus.complete = statusCompleteInitial+(val*completeInc*0.009);
+                console.log(percentStr+' '+val+' '+publisherStatus.complete);
+            }
         }
         system.doSioEmit('update', publisherStatus);
     });
 
     publisher.on('exit', function (code) {
-        publisher.kill('SIGKILL');
         publisher = 0;
         if(exiting){
+            exiting = 0;
             return;
         }
-        console.log('Complete');
-        publisherStatus.status = "Complete";
-        publisherStatus.complete = 1;
-        system.doSioEmit('update', publisherStatus);
+        console.log('Upload Complete');
         callback();
     });
 }
 
 
 // Copy to destination path
-function copyFile(file, path, callback){
+function copyFile(file, destPath, destName, completeInc, callback){
     
-    if(exiting){return;}
-    
-    var fullPath = config.flash_disk_dir;
-    if (!fullPath.endsWith('/')){
-        fullPath = fullPath + '/';
+    if(exiting){
+        exiting = 0;
+        return;
     }
-    fullPath = fullPath + path;
+    
+    var statusCompleteInitial = publisherStatus.complete;
+    
+    if (!destPath.endsWith('/')){
+        destPath += '/';
+    }
     
     publisherStatus.locked = 1;
     
-    publisher = spawn('curl',['-o', fullPath, 'file://'+process.cwd()+'/'+file],{cwd: process.cwd(), env: process.env, detached: true});
+    publisher = spawn('curl',['--progress-bar','-o', destName, 'file://'+file],{cwd: destPath, env: process.env, detached: true});
     
     console.log('Copying File');
     publisherStatus.status = "Copying File";
-    publisherStatus.complete = 0.5;
+    statusCompleteInitial += (completeInc*0.1);
+    publisherStatus.complete = statusCompleteInitial;
     system.doSioEmit('update', publisherStatus);
 
     publisher.on('error', function (err) {
+        exiting = 1;
         console.log('File Copy Failed:'+err);
+        publisherStatus.status = 'Error Copying File';
+        publisherStatus.complete = -1;
+        system.doSioEmit('update', publisherStatus);
+        finished(true);
         publisher.kill('SIGTERM');
     });
     
     publisher.stderr.on('data', function (data) {
         var output = String(data).split("\n");
         for (var i = 0; i < output.length; i++) {
-            publisherStatus.status = "Uploading File: "+output[i]+"&#37;";
+            var percentStr = output[i].match(/[0-9]+.[0-9]+%/g)+'';
+            var valStr = percentStr.substr(0, percentStr.length-1);
+            var val = parseFloat(valStr);
+            if(val){
+                publisherStatus.status = "Copying File: "+percentStr;
+                publisherStatus.complete = statusCompleteInitial+(val*completeInc*0.009);
+                console.log(percentStr+' '+val+' '+publisherStatus.complete);
+            }
         }
         system.doSioEmit('update', publisherStatus);
     });
 
     publisher.on('exit', function (code) {
-        publisher.kill('SIGKILL');
         publisher = 0;
         if(exiting){
+            exiting = 0;
             return;
         }
-        console.log('Complete');
-        publisherStatus.status = "Complete";
-        publisherStatus.complete = 1;
-        system.doSioEmit('update', publisherStatus);
+        console.log('Copy Complete');
         callback();
     });
 }
@@ -561,6 +646,30 @@ function getDev(path, callback){
         }
     });
     
+}
+
+//List files in the file_working directory ready to copy
+function reloadFileTranscoded(callback) {
+    fs.readdir(config.working_dir+'file_working/', function (err, files) {
+        if (err) {
+            console.log('Error getting transcoded files at '+config.working_dir+'file_working/ ' + err);
+            publisherStatus.lastFileStatus = 0;
+            publisherStatus.status = 'Error Reloading Previous Files';
+            publisherStatus.complete = -1;
+            system.doSioEmit('update', publisherStatus);
+            system.setConfig('file_status', publisherStatus.lastFileStatus);
+            finished(true);
+            return;
+        }
+        var tcNames = files.slice();
+        console.log('Reloading transcoded files');
+        transcodedFiles = []
+        for(var i=0; i<tcNames.length; i++){
+            transcodedFiles[i] = config.working_dir+'file_working/'+tcNames[i];
+            console.log(tcNames[i]);
+        }
+        callback();
+    });
 }
 
 //run lsof, callback when no files open, otherwise repeat for # attempts
@@ -622,8 +731,6 @@ function checkFSClear(dev, attempts, timeout, callback){
             return;
         } else {
             if(output[8] == '0'){
-                publisherStatus.locked = 0;
-                system.doSioEmit('update', publisherStatus);
                 callback(true);
             } else {
                 setTimeout(function(){
@@ -666,10 +773,11 @@ function syncAndClear(path, callback){
 
 // publishing done
 function finished(reset) {
+    publisherStatus.status = 0;
+    publisherStatus.complete = 0;
+    system.sendNotice('status', {publishing:0});
     if(reset){
         setTimeout(function(){
-            publisherStatus.status = 0;
-            publisherStatus.complete = 0;
             system.doSioEmit('update', publisherStatus);
         }, 4000);
     }
@@ -684,11 +792,10 @@ function stopPublisher(message){
     if(publisher){
         exiting = 1;
         publisher.kill('SIGTERM');
-        exiting = 0;
     }
     console.log('Publisher stopped: '+message);
     publisherStatus.status = message;
-    publisherStatus.complete = 1;
+    publisherStatus.complete = -1;
     system.doSioEmit('update', publisherStatus);
     finished(true);
 }
@@ -705,18 +812,21 @@ function publishDisc(sourceFNames, menuFName, resume){
     }
     
     if(recorderStatus.recording){
-        io.emit('recorderUpdate', recorderStatus);
         console.log('Recording; cannot publish.');
         return;
     }
     
+    system.sendNotice('status', {publishing:1});
+    
     if (!resume) {
         publisherStatus.lastDiscStatus = 0;
         system.setConfig('disc_status', publisherStatus.lastDiscStatus);
-        config.save();
     }
     
     var cb_finished = function () {
+        publisherStatus.status = "Complete";
+        publisherStatus.complete = 1;
+        system.doSioEmit('update', publisherStatus);
         publisherStatus.lastDiscStatus = 3;
         system.setConfig('disc_status', publisherStatus.lastDiscStatus);
         finished(true);
@@ -724,13 +834,19 @@ function publishDisc(sourceFNames, menuFName, resume){
     };
     
     var cb_writeOutput = function () {
-        writeOutput(0.6, cb_finished);
+        publisherStatus.status = "Ready to Burn";
+        publisherStatus.complete = 0.69;
+        system.doSioEmit('update', publisherStatus);
+        writeOutput(0.3, cb_finished);
         return;
     };
     
     var cb_prepOutput = function () {
         publisherStatus.lastDiscStatus = 2;
         system.setConfig('disc_status', publisherStatus.lastDiscStatus);
+        publisherStatus.status = "Waiting for disc";
+        publisherStatus.complete = 0.68;
+        system.doSioEmit('update', publisherStatus);
         prepOutput(cb_writeOutput);
         return;
     };
@@ -738,19 +854,28 @@ function publishDisc(sourceFNames, menuFName, resume){
     var cb_generateTS = function () {
         publisherStatus.lastDiscStatus = 1;
         system.setConfig('disc_status', publisherStatus.lastDiscStatus);
+        publisherStatus.status = "Compiling Disc Contents";
+        publisherStatus.complete = 0.66;
+        system.doSioEmit('update', publisherStatus);
         generateTS(cb_prepOutput);
         return;
     };
     
     var cb_generateXML = function () {
+        publisherStatus.status = "Configuring Disc Structure";
+        publisherStatus.complete = 0.64;
+        system.doSioEmit('update', publisherStatus);
         generateXML(transcodedFiles, menuFName, cb_generateTS);
         return;
     };
     
     var cb_transcode = function () {
+        publisherStatus.status = "Preparing files";
+        publisherStatus.complete = 0.04;
+        system.doSioEmit('update', publisherStatus);
         if (currentTcIndex < sourceFNames.length) {
-            transcodeVideo([sourceFNames[currentTcIndex]], 'pal-dvd', '', '', '', '', '', 'publishing/disc_working/vid'+currentTcIndex+'.mpg', (0.5/sourceFNames.length), cb_transcode);
             transcodedFiles.push('vid'+currentTcIndex+'.mpg');
+            transcodeVideo([sourceFNames[currentTcIndex]], 'dvd', 'pal-dvd', '', '', '', '', '', 'publishing/disc_working/vid'+currentTcIndex+'.mpg', (0.6/sourceFNames.length), cb_transcode);
             currentTcIndex++;
         } else {
             cb_generateXML();
@@ -759,6 +884,9 @@ function publishDisc(sourceFNames, menuFName, resume){
     };
     
     var cb_setupDirs = function () {
+        publisherStatus.status = "Initialising";
+        publisherStatus.complete = 0.02;
+        system.doSioEmit('update', publisherStatus);
         setupDirs('publishing/', ['disc_working','disc_fs'], cb_transcode);
         return;
     };
@@ -773,21 +901,30 @@ function publishDisc(sourceFNames, menuFName, resume){
             break;
         default:
             reloadAvailableFiles();
+            // Check input files provided
+            if (sourceFNames.length<1) {
+                finished(true);
+                return;
+            }
             // validate input file names
             for (var i = 0; i < sourceFNames.length; i++) {
                 if(publisherFiles.indexOf(sourceFNames[i])<0){
+                    finished(true);
                     return;
                 }
             }
+            
+            publisherStatus.status = "Clearing old files";
+            system.doSioEmit('update', publisherStatus);
             currentTcIndex = 0;
             transcodedFiles = [];
-            cleanDirs('publishing/', ['disc_working','disc_fs'], cb_setupDirs);
+            cleanDirs(config.working_dir, ['disc_working','disc_fs'], cb_setupDirs);
     }
     
 }
 
 
-function publishFTP(sourceFNames, destFName, transcode, server, username, password, resume){
+function publishUpload(sourceFNames, destFName, transcode, protocol, server, username, password, resume){
     
     if(exiting){return;}
     
@@ -798,19 +935,23 @@ function publishFTP(sourceFNames, destFName, transcode, server, username, passwo
     }
     
     if(recorderStatus.recording){
-        io.emit('recorderUpdate', recorderStatus);
         console.log('Recording; cannot publish.');
         return;
     }
     
+    system.sendNotice('status', {publishing:1});
+    
     if (!resume) {
         publisherStatus.lastFileStatus = 0;
         system.setConfig('file_status', publisherStatus.lastFileStatus);
-        config.save();
     }
     
     var cb_finished = function () {
+        publisherStatus.status = "Upload Complete.";
+        publisherStatus.complete = 1;
         publisherStatus.lastFileStatus = 2;
+        system.doSioEmit('update', publisherStatus);
+        console.log('Complete.');
         system.setConfig('file_status', publisherStatus.lastFileStatus);
         finished(true);
         return;
@@ -818,30 +959,68 @@ function publishFTP(sourceFNames, destFName, transcode, server, username, passwo
     
     var cb_uploadFile = function () {
         publisherStatus.lastFileStatus = 1;
+        publisherStatus.status = "Ready to upload";
+        publisherStatus.complete = 0.64;
+        system.doSioEmit('update', publisherStatus);
         system.setConfig('file_status', publisherStatus.lastFileStatus);
-        uploadFile(transcodedFiles[0], server, username, password, cb_finished);
+        uploadFile(transcodedFiles[0], protocol+server, username, password, 0.3, cb_finished);
         return;
     };
     
     var cb_transcode = function () {
-        transcodeVideo(sourceFNames, transcode.vFormat, transcode.vFRate, transcode.vCodec, transcode.vBitrate, transcode.aCodec, transcode.aBitrate, 'publishing/file_working/'+destFName+'.'+transcode.filetype, 0.5, cb_uploadFile);
-        transcodedFiles.push('publishing/file_working/'+destFName+'.'+transcode.filetype);
+        publisherStatus.status = "Preparing files";
+        publisherStatus.complete = 0.04;
+        transcodedFiles.push(config.working_dir+'file_working/'+destFName+'.'+transcode.filetype);
+        transcodeVideo(sourceFNames, transcode.mediatype, transcode.vFormat, transcode.vFRate, transcode.vCodec, transcode.vBitrate, transcode.aCodec, transcode.aBitrate, config.working_dir+'file_working/'+destFName+'.'+transcode.filetype, 0.6, cb_uploadFile);
+        return;
+    };
+    
+    var cb_uploadTranscoded = function () {
+        publisherStatus.lastFileStatus = 1;
+        system.setConfig('file_status', publisherStatus.lastFileStatus);
+        cb_uploadFile();
+        return;
+    };
+    
+    var cb_repeatUpload = function () {
+        destFile = destFName;
+        var ext = transcodedFiles[0].split('.');
+        destFile += '.'+ext[ext.length-1];
+        cb_uploadFile();
+        return;
+    };
+    
+    var cb_transcode = function () {
+        publisherStatus.status = "Preparing files";
+        publisherStatus.complete = 0.04;
+        transcodedFiles.push(config.working_dir+'file_working/'+destFName+'.'+transcode.filetype);
+        transcodeVideo(sourceFNames, transcode.mediatype, transcode.vFormat, transcode.vFRate, transcode.vCodec, transcode.vBitrate, transcode.aCodec, transcode.aBitrate, config.working_dir+'file_working/'+destFName+'.'+transcode.filetype, 0.6, cb_uploadTranscoded);
         return;
     };
     
     var cb_noTranscode = function () {
+        publisherStatus.status = "Preparing to upload";
+        publisherStatus.complete = 0.50;
+        system.doSioEmit('update', publisherStatus);
         for (var i = 0; i < sourceFNames.length; i++) {
-            transcodedFiles.push(recordDir+sourceFNames[i]);
+            transcodedFiles.push(config.files_dir+sourceFNames[i]);
         }
         cb_uploadFile();
         return;
     };
     
     var cb_setupDirs = function () {
+        publisherStatus.status = "Initialising";
+        publisherStatus.complete = 0.02;
+        system.doSioEmit('update', publisherStatus);
+        destFile = destFName;
         if (transcode.filetype) {
-            setupDirs('publishing/', ['file_working'], cb_transcode);
+            destFile += '.'+transcode.filetype;
+            setupDirs(config.working_dir, ['file_working'], cb_transcode);
         } else {
-            setupDirs('publishing/', ['file_working'], cb_noTranscode);
+            var ext = transcodedFiles[0].split('.');
+            destFile += '.'+ext[ext.length-1];
+            setupDirs(config.working_dir, ['file_working'], cb_noTranscode);
         }
         return;
     };
@@ -849,24 +1028,31 @@ function publishFTP(sourceFNames, destFName, transcode, server, username, passwo
     switch(publisherStatus.lastFileStatus) {
         case 1:
         case 2:
-            uploadFile(cb_finished);
+            reloadFileTranscoded(cb_repeatUpload);
             break;
         default:
             reloadAvailableFiles();
+            // Check input files provided
+            if (sourceFNames.length<1) {
+                return;
+            }
             // validate input file names
             for (var i = 0; i < sourceFNames.length; i++) {
                 if(publisherFiles.indexOf(sourceFNames[i])<0){
                     return;
                 }
             }
+            
+            publisherStatus.status = "Clearing old files";
+            system.doSioEmit('update', publisherStatus);
             transcodedFiles = [];
-            cleanDirs('publishing/', ['file_working'], cb_setupDirs);
+            cleanDirs(config.working_dir, ['file_working'], cb_setupDirs);
     }
     
 }
 
 
-function publishRemovableDrive(sourceFNames, destFName, transcode, path, resume){
+function publishRemovableDrive(sourceFNames, destFName, transcode, drivePath, resume){
     
     if(exiting){return;}
     
@@ -877,22 +1063,23 @@ function publishRemovableDrive(sourceFNames, destFName, transcode, path, resume)
     }
     
     if(recorderStatus.recording){
-        io.emit('recorderUpdate', recorderStatus);
         console.log('Recording; cannot publish.');
         return;
     }
     
+    system.sendNotice('status', {publishing:1});
+    
     if (!resume) {
         publisherStatus.lastFileStatus = 0;
         system.setConfig('file_status', publisherStatus.lastFileStatus);
-        config.save();
     }
     
     var cb_finished = function () {
-        publisherStatus.lastFileStatus = 2;
-        console.log('Complete. Safe to remove.');
         publisherStatus.status = "Complete. It is now safe to remove the drive.";
-        publisherStatus.complete = 0.9;
+        publisherStatus.complete = 1;
+        publisherStatus.lastFileStatus = 2;
+        system.doSioEmit('update', publisherStatus);
+        console.log('Complete. Safe to remove.');
         system.setConfig('file_status', publisherStatus.lastFileStatus);
         finished(true);
         return;
@@ -902,7 +1089,7 @@ function publishRemovableDrive(sourceFNames, destFName, transcode, path, resume)
         if(success){
             cb_finished();
         } else {
-            syncAndClear(path, cb_syncAndClear2);
+            syncAndClear(drivePath, cb_syncAndClear2);
         }
         return;
     };
@@ -910,38 +1097,68 @@ function publishRemovableDrive(sourceFNames, destFName, transcode, path, resume)
     var cb_syncAndClear = function () {
         console.log('Waiting for drive');
         publisherStatus.status = "Waiting for drive";
-        publisherStatus.complete = 0.9;
+        publisherStatus.complete = 0.95;
         system.doSioEmit('update', publisherStatus);
-        syncAndClear(path, cb_syncAndClear2);
+        syncAndClear(drivePath, cb_syncAndClear2);
         return;
     };
     
     var cb_copyFile = function () {
         publisherStatus.lastFileStatus = 1;
+        publisherStatus.status = "Ready to copy";
+        publisherStatus.complete = 0.64;
+        system.doSioEmit('update', publisherStatus);
         system.setConfig('file_status', publisherStatus.lastFileStatus);
-        copyFile(transcodedFiles[0], server, username, password, cb_finished);
+        copyFile(transcodedFiles[0], drivePath, destFile, 0.3, cb_finished);
+        return;
+    };
+    
+    var cb_copyTranscoded = function () {
+        publisherStatus.lastFileStatus = 1;
+        system.setConfig('file_status', publisherStatus.lastFileStatus);
+        cb_copyFile();
+        return;
+    };
+    
+    var cb_repeatCopy = function () {
+        destFile = destFName;
+        var ext = transcodedFiles[0].split('.');
+        destFile += '.'+ext[ext.length-1];
+        cb_copyFile();
         return;
     };
     
     var cb_transcode = function () {
-        transcodeVideo(sourceFNames, transcode.vFormat, transcode.vFRate, transcode.vCodec, transcode.vBitrate, transcode.aCodec, transcode.aBitrate, 'publishing/file_working/'+destFName+'.'+transcode.filetype, 0.5, cb_copyFile);
-        transcodedFiles.push('publishing/file_working/'+destFName+'.'+transcode.filetype);
+        publisherStatus.status = "Preparing files";
+        publisherStatus.complete = 0.04;
+        transcodedFiles.push(config.working_dir+'file_working/'+destFName+'.'+transcode.filetype);
+        transcodeVideo(sourceFNames, transcode.mediatype, transcode.vFormat, transcode.vFRate, transcode.vCodec, transcode.vBitrate, transcode.aCodec, transcode.aBitrate, config.working_dir+'file_working/'+destFName+'.'+transcode.filetype, 0.6, cb_copyTranscoded);
         return;
     };
     
     var cb_noTranscode = function () {
+        publisherStatus.status = "Preparing to copy";
+        publisherStatus.complete = 0.50;
+        system.doSioEmit('update', publisherStatus);
         for (var i = 0; i < sourceFNames.length; i++) {
-            transcodedFiles.push(recordDir+sourceFNames[i]);
+            transcodedFiles.push(config.files_dir+sourceFNames[i]);
         }
         cb_copyFile();
         return;
     };
     
     var cb_setupDirs = function () {
+        publisherStatus.status = "Initialising";
+        publisherStatus.complete = 0.02;
+        system.doSioEmit('update', publisherStatus);
+        destFile = destFName;
         if (transcode.filetype) {
-            setupDirs('publishing/', ['file_working'], cb_transcode);
+            destFile += '.'+transcode.filetype;
+            setupDirs(config.working_dir, ['file_working'], cb_transcode);
         } else {
-            setupDirs('publishing/', ['file_working'], cb_noTranscode);
+            var ext = transcodedFiles[0].split('.');
+            destFile += '.'+ext[ext.length-1];
+            setupDirs(config.working_dir, ['file_working'], cb_noTranscode);
         }
         return;
     };
@@ -949,18 +1166,27 @@ function publishRemovableDrive(sourceFNames, destFName, transcode, path, resume)
     switch(publisherStatus.lastFileStatus) {
         case 1:
         case 2:
-            copyFile(cb_finished);
+            reloadFileTranscoded(cb_repeatCopy);
             break;
         default:
             reloadAvailableFiles();
+            // Check input files provided
+            if (sourceFNames.length<1) {
+                finished(true);
+                return;
+            }
             // validate input file names
             for (var i = 0; i < sourceFNames.length; i++) {
                 if(publisherFiles.indexOf(sourceFNames[i])<0){
+                    finished(true);
                     return;
                 }
             }
+            
+            publisherStatus.status = "Clearing old files";
+            system.doSioEmit('update', publisherStatus);
             transcodedFiles = [];
-            cleanDirs('publishing/', ['file_working'], cb_setupDirs);
+            cleanDirs(config.working_dir, ['file_working'], cb_setupDirs);
     }
     
 }

@@ -5,6 +5,7 @@ var aLvlInterval = 4;
 var aLvlCount = 0;
 var inMutex = 0;
 var aPreMutex = 0;
+var exiting = 0;
 
 var spawn  = require('child_process').spawn;
 var system = null;
@@ -54,9 +55,10 @@ exports.notify = function (signalName, value) {
 // Socket.IO Callbacks
 
 sio_hooks.push({event:'changeProgram', callback:function(change){
-    if (change.input % 1000 == 5){
+
+    if (parseInt(change.input/1000) == 5){
         //Set Keyers
-        var targetKeyer = ((change.input-5000) % 10)-1;
+        var targetKeyer = (parseInt((change.input-5000) / 10)-1);
         for(var i=0; i<atemStatus.dsk.length; i++){
             if((atemStatus.dsk[i].live == true && i != targetKeyer)||(atemStatus.dsk[i].live == false && i == targetKeyer)){
                 sendAtemInput('SET DSKTIE '+i+' '+1);
@@ -98,9 +100,9 @@ sio_hooks.push({event:'changeProgram', callback:function(change){
 }});
 
 sio_hooks.push({event:'setPreview', callback:function(input){
-    if (change.input % 1000 == 5){
+    if (parseInt(change.input / 1000) == 5){
         //Set Keyers
-        var targetKeyer = ((change.input-5000) % 10)-1;
+        var targetKeyer = (parseInt((change.input-5000) / 10)-1);
         for(var i=0; i<atemStatus.dsk.length; i++){
             if((atemStatus.dsk[i].live == true && i != targetKeyer)||(atemStatus.dsk[i].live == false && i == targetKeyer)){
                 sendAtemInput('SET DSKTIE '+i+' '+1);
@@ -259,7 +261,7 @@ function parseAtemOutput(line){
 
 function runAudioPreset(presetId){
     
-    // Check if a present is already running. If so, abort. If not, mark as preset running.
+    // Check if a preset is already running. If so, abort. If not, mark as preset running.
     if(aPreMutex){
         return;
     }

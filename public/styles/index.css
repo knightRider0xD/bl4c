@@ -225,3 +225,24 @@ div.ptz-zoom-div div.slider-centerline {
   background-color: grey;
   left: 50%;
 }
+
+div.publishSourceFiles {
+  height: 400px;
+  overflow-y: scroll;
+}
+
+li.publish-add-remove button {
+  border:0;
+  padding:4px 14px;
+  background:none;
+  float:right;
+  font-size:1.6em;
+  width: 15%;
+}
+
+li.publish-add-remove div {
+  padding:10px;
+  white-space: nowrap;
+  overflow-x: hidden;
+  width: 82%;
+}

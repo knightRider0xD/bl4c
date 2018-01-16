@@ -20,6 +20,11 @@
   border-color: #aaa;
 }
 
+.btn-media-av,
+.btn-media-call {
+  text-align: left;
+}
+
 .nav-pills-info > li.active > a,
 .nav-pills-info > li.active > a:hover,
 .nav-pills-info > li.active > a:focus {

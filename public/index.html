@@ -21,7 +21,9 @@
     <div class="row">
         <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="main()">Main Controls</button>
         <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="publish()">Publish</button>
+        <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="window.location.href='http://localhost:5000'">View Livestream</button>
         <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="settings()">Settings</button>
+        <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="window.location.href='/help.html'">Help</button>
     </div>
 </div>
 
@@ -66,18 +68,18 @@
         <div class="col-md-9 col-sm-9 hidden-xs">
             <div class="row"><div class="col-md-11 col-sm-11" style="padding:0;">
                 <ul class="nav nav-pills nav-pills-info nav-justified nav-lg">
-                    <li role="presentation" class="indexTab active"><a href="#" onclick="guiMainPageSwitcher(0);return false;">V&nbsp;Switch</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(1);return false;">A&nbsp;Mixer</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(2);return false;">Cam&nbsp;PTZ</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(3);return false;">M&nbsp;Player</a></li>
-                    <li role="presentation" class="indexTab"><a href="#" onclick="guiMainPageSwitcher(4);return false;">Rec/Out</a></li>
+                    <li role="presentation" class="index-tab tab-vswitch active"><a href="#" onclick="guiMainPageSwitcher('vswitch');return false;">V&nbsp;Switch</a></li>
+                    <li role="presentation" class="index-tab tab-amixers"><a href="#" onclick="guiMainPageSwitcher('amixers');return false;">A&nbsp;Mixer</a></li>
+                    <li role="presentation" class="index-tab tab-ptz"><a href="#" onclick="guiMainPageSwitcher('ptz');return false;">Cam&nbsp;PTZ</a></li>
+                    <li role="presentation" class="index-tab tab-mplayer"><a href="#" onclick="guiMainPageSwitcher('mplayer');return false;">M&nbsp;Player</a></li>
+                    <li role="presentation" class="index-tab tab-record"><a href="#" onclick="guiMainPageSwitcher('record');return false;">Record</a></li>
                 </ul>
                 </div>
                 <button type="button" class="col-md-1 col-sm-1 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
             </div>
             
             
-            <div class="row indexPage" style="">
+            <div class="row index-page page-vswitch" style="">
                 <div class="col-md-12 col-sm-12">
                 <div class="row"><div class="col-md-12 col-sm-12">
                     <p style="font-size:1.2em; margin: 5px 0 0 0;">AUTOMATIC PROGRAM TRANSITION</p>
@@ -123,7 +125,7 @@
             </div>
             
             <!-- Audio Mixers -->
-            <div class="row indexPage" style="display:none;">
+            <div class="row index-page page-amixers" style="display:none;">
                 <div id="mixer1"    class="amixer chnl-select chnl-default-4                 col-md-2 col-sm-2 grid-5"></div>
                 <div id="mixer2"    class="amixer chnl-select chnl-default-8                 col-md-2 col-sm-2 grid-5"></div>
                 <div id="mixer3"    class="amixer chnl-select chnl-default-1201              col-md-2 col-sm-2 grid-5"></div>
@@ -132,7 +134,7 @@
             </div>
             
             <!-- PTZ Controls -->
-            <div class="row indexPage" style="display:none;">
+            <div class="row index-page page-ptz" style="display:none;">
                 <div class="col-md-12 col-sm-12">
                     <div class="row">
                         <div class="col-md-1 col-sm-1"></div>
@@ -163,51 +165,86 @@
             </div>
                 
             <!-- Media Player -->
-            <div class="row indexPage" style="display: none;">
+            <div class="row index-page page-mplayer" style="display: none;">
                 <br>
                 <div class="col-md-4 col-sm-4">
                     <row>
                         <p style="font-size:1.2em;">&nbsp;</p>
-                        <button type="button" id="mediaPlay" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="playMedia()"><span class="glyphicon glyphicon-play" aria-hidden="true"></span>&nbsp;PLAY FROM START</button>
-                        <button type="button" id="mediaPause" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="pauseMedia()" disabled="True"><span class="glyphicon glyphicon-pause" aria-hidden="true"></span>&nbsp;PAUSE PLAYBACK&nbsp;</button>
-                        <button type="button" id="mediaStop" class="col-md-12 col-sm-12 btn btn-lg btn-default" onclick="stopMedia()"><span class="glyphicon glyphicon-stop" aria-hidden="true"></span>&nbsp;STOP PLAYBACK&nbsp;&nbsp;&nbsp;</button>
+                        <button type="button" id="mediaPlay" class="col-md-12 col-sm-12 btn btn-lg btn-default btn-media-av" onclick="playMedia()"><span class="glyphicon glyphicon-play" aria-hidden="true"></span>&nbsp;PLAY FROM START</button>
+                        <button type="button" id="mediaPause" class="col-md-12 col-sm-12 btn btn-lg btn-default btn-media-av" onclick="pauseMedia()" disabled="true"><span class="glyphicon glyphicon-pause" aria-hidden="true"></span>&nbsp;PAUSE PLAYBACK&nbsp;</button>
+                        <button type="button" id="mediaStop" class="col-md-12 col-sm-12 btn btn-lg btn-default btn-media-av" onclick="stopMedia()"><span class="glyphicon glyphicon-stop" aria-hidden="true"></span>&nbsp;STOP PLAYBACK&nbsp;&nbsp;&nbsp;</button>
+                        <button type="button" id="callLogin" class="col-md-12 col-sm-12 btn btn-lg btn-default btn-media-call" onclick="loginCall()" style="display: none;"><span class="glyphicon glyphicon-log-in" aria-hidden="true"></span>&nbsp;LOG&nbsp;IN&nbsp;</button>
+                        <button type="button" id="callStart" class="col-md-12 col-sm-12 btn btn-lg btn-default btn-media-call" onclick="startCall()" disabled="true" style="display: none;"><span class="glyphicon glyphicon-earphone" aria-hidden="true"></span>&nbsp;START CALL&nbsp;</button>
+                        <button type="button" id="callEnd" class="col-md-12 col-sm-12 btn btn-lg btn-default btn-media-call" onclick="endCall()" disabled="true" style="display: none;"><span class="glyphicon glyphicon-phone-alt" aria-hidden="true"></span>&nbsp;END CALL&nbsp;</button>
                     </row>
                 </div>
 
                 <div class="col-md-8 col-sm-8">
                     <row>
                         <p style="font-size:1.2em; margin: 5px 0 0 0;">MEDIA</p>
-                        <select id="mediaSelect" class="form-control">
-                            <option>SELECT ...</option>
+                        <select id="mediaSelect" class="form-control" onchange="guiMselect()">
+                            <option value="0">SELECT ...</option>
                             <option disabled="disabled"></option>
                             <option value="recstream">RECORDING STREAM (DELAYED)</option>
                             <option disabled="disabled"></option>
                             <option value="bluray">BLU-RAY</option>
                             <option value="dvd">DVD</option>
-                            <option value="vcd">VCD</option>
+                            <!--<option value="vcd">VCD</option> -->
                             <option value="cdda">AUDIO CD</option>
                             <option disabled="disabled"></option>
+                            <option value="hangouts">GOOGLE HANGOUTS CALL</option>
+                            <option value="messenger">FACEBOOK MESSENGER CALL</option>
+                            <option value="skype">SKYPE CALL</option>
+                            <option disabled="disabled"></option>
+                            <option value="mrl">CUSTOM</option>
                         </select>
                     </row>
                     <hr style="margin:2px;"/>
-                    <row>
-                        <p style="font-size:1.2em; margin: 5px 0 0 0;">TITLE/TRACK</p>
+                    <row id="mediaStdConfig" class="media-config">
+                        <p id="mediaTitleLabel" style="font-size:1.2em; margin: 5px 0 0 0;">TITLE/TRACK</p>
                         <input type="number" id="mediaTitle" min="0" step="1" value="0" class="form-control" placeholder="Title/Track #" />
-                    </row>
-                    <hr style="margin:2px;"/>
-                    <row>
+                        
+                        <hr style="margin:2px;"/>
+                    
                         <p style="font-size:1.2em; margin: 5px 0 0 0;">START POSITION</p>
                         <div class="col-md-4 col-sm-4"><div class="row"><input type="number" id="mediaStartPosM" min="0" step="1" value="0" class="form-control" /></div></div>
                         <div class="col-md-1 col-sm-1">MIN&nbsp;</div>
                         <div class="col-md-4 col-sm-4"><div class="row"><input type="number" id="mediaStartPosS" min="0" step="1" value="0" class="form-control" /></div></div>
                         <div class="col-md-1 col-sm-1">SECS</div>
                     </row>
+                    
+                    <row id="mediaCustConfig" class="media-config" style="display: none;">
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">VLC MRL</p>
+                        <textarea id="mediaMRL" rows="4" style="width:100%;"></textarea>
+                    </row>
+                    
+                    <row id="callHangoutsConfig" class="media-config" style="display: none;">
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">GOOGLE USERNAME</p>
+                        <input type="text" id="hangoutsUser" class="form-control"/>
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">GOOGLE PASSWORD</p>
+                        <input type="password" id="hangoutsPass" class="form-control"/>
+                    </row>
+                    
+                    <row id="callMessengerConfig" class="media-config" style="display: none;">
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">MESSENGER USERNAME</p>
+                        <input type="text" id="messengerUser" class="form-control"/>
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">MESSENGER PASSWORD</p>
+                        <input type="password" id="messengerPass" class="form-control"/>
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">RECIPIENT NUMERIC FBID</p>
+                        <input type="text" id="messengerContact" class="form-control"/>
+                    </row>
+                    
+                    <row id="callSkypeConfig" class="media-config" style="display: none;">
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">SKYPE</p>
+                        <p style="font-size:1.2em; margin: 5px 0 0 0;">xxxxx</p>
+                    </row>
+                    
                 </div>
             </div>
             
             
 
-            <div class="row indexPage" style="display:none;">
+            <div class="row index-page page-record" style="display:none;">
                 <br>
                 <div class="col-md-6 col-sm-6">
                     <div class="panel panel-info">
@@ -265,11 +302,11 @@
     <div class="row" id="pubControl" >
         <div class="col-md-4 col-sm-4 hidden-xs">
             <h4>SOURCE FILES</h4>
-            <row>
+            <div class="publishSourceFiles" class="row">
                 <ul id="sourceFileList" class="list-group">
                     <!--<li class="list-group-item" style="padding:0"><button style="border:0;padding:4px 14px;background:none;float:right;font-size:1.6em;" onclick="copyToPublishList('test')"><span class="glyphicon glyphicon-plus"></span></button><div style="padding:10px;">TEST</div></li>-->
                 </ul>
-            </row>
+            </div>
         </div>
         
         <div class="col-md-8 col-sm-8 col-xs-12">
@@ -278,7 +315,7 @@
                 <ul class="nav nav-pills nav-pills-info nav-justified nav-lg">
                     <li role="presentation" class="publish-tab tab-dvd active"><a href="#" onclick="guiPublishPageSwitcher('dvd');return false;">Burn DVD</a></li>
                     <li role="presentation" class="publish-tab tab-usb"><a href="#" onclick="guiPublishPageSwitcher('usb');return false;">File Copy</a></li>
-                    <li role="presentation" class="publish-tab tab-ftp"><a href="#" onclick="guiPublishPageSwitcher('ftp');return false;">FTP Upload</a></li>
+                    <li role="presentation" class="publish-tab tab-ftp"><a href="#" onclick="guiPublishPageSwitcher('ftp');return false;">File Upload</a></li>
                 </ul>
             </div>
         
@@ -294,9 +331,9 @@
             <hr style="margin:4px;" />
 
             <div class="publish-page page-dvd row">
-                <div>
+                <div style="margin:10px;">
                     <div class="col-md-3 col-sm-3">
-                        <p>Select Disc Menu</p>
+                        Disc Menu Style
                     </div>
                     <div class="col-md-9 col-sm-9">
                         <select id="discMenuList" class="form-control" style="width:100%">
@@ -305,11 +342,9 @@
                         </select>
                     </div>
                 </div>
-                <div>
-                    <div class="col-md-4 col-sm-4 hidden-xs">
-                        
-                    </div>
-                    <div class="col-md-4 col-sm-4 col-xs-12">
+                <div style="margin:10px;">
+                    <div class="col-md-3 col-sm-3 hidden-xs"></div>
+                    <div class="col-md-5 col-sm-5 col-xs-12">
                         <button type="button" id="burnerResumeBtn" class="btn btn-lg btn-spaced btn-default" onclick="burnDisc(1)" disabled><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;RESUME/COPY</button>
                     </div>
                     <div class="col-md-4 col-sm-4 hidden-xs">
@@ -319,9 +354,9 @@
             </div>
             
             <div class="publish-page page-usb row" style="display:none;">
-                <div>
+                <div style="margin:10px;">
                     <div class="col-md-3 col-sm-3">
-                        <p>Select Output Device</p>
+                        Output Device
                     </div>
                     <div class="col-md-9 col-sm-9">
                         <select id="fileDestDevice" class="form-control" style="width:100%">
@@ -329,9 +364,9 @@
                         </select>
                     </div>
                 </div>
-                <div>
+                <div style="margin:10px;">
                     <div class="col-md-3 col-sm-3">
-                        <p>Select Output Format</p>
+                        Output Format
                     </div>
                     <div class="col-md-9 col-sm-9">
                         <select id="fileTranscode" class="form-control" style="width:100%" onchange="tcodeFmt(this,'fileOutExt')">
@@ -349,59 +384,67 @@
                         </select>
                     </div>
                 </div>
-                <div>
+                <div style="margin:10px;">
                     <div class="col-md-3 col-sm-3">
-                        <p>Output Filename</p>
+                        Output Filename
                     </div>
                     <div class="col-md-9 col-sm-9">
                         <div class="input-group">
-                            <input type="text" id="fileOutName" class="form-control" placeholder="filename" aria-describedby="basic-addon2">
-                            <span id="fileOutExt" class="input-group-addon" id="basic-addon2">.mp4</span>
+                            <input type="text" id="fileOutName" class="form-control" placeholder="filename" aria-describedby="fileOutExt">
+                            <span id="fileOutExt" class="input-group-addon">.mp4</span>
                         </div>
                     </div>
                 </div>
-                <div>
-                    <div class="col-md-4 col-sm-4 hidden-xs">
-                        
-                    </div>
-                    <div class="col-md-4 col-sm-4 col-xs-12">
+                <div style="margin:10px;">
+                    <div class="col-md-3 col-sm-3 hidden-xs"></div>
+                    <div class="col-md-5 col-sm-5 col-xs-12">
                         <button type="button" id="fileResumeBtn" class="btn btn-lg btn-spaced btn-default" onclick="copyFile(1)" disabled><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;REPEAT LAST</button>
                     </div>
                     <div class="col-md-4 col-sm-4 hidden-xs">
-                        <button type="button" id="fileStartBtn" class="btn btn-lg btn-spaced btn-success" onclick="copyFile(0)"><span class="glyphicon glyphicon-hdd" aria-hidden="true"></span>&nbsp;COPY TO DRIVE</button>
+                        <button type="button" id="fileStartBtn" class="btn btn-lg btn-spaced btn-success" onclick="copyFile(0)"><span class="glyphicon glyphicon-hdd" aria-hidden="true"></span>&nbsp;COPY FILE</button>
                     </div>
                 </div>
             </div>
             
             <div class="publish-page page-ftp row" style="display:none;">
-                <div>
-                    <div class="col-md-3 col-sm-3">
-                        <p>Server URI</p>
+                <div style="margin:10px;">
+                    <div class="col-md-2 col-sm-2">
+                        Protocol
                     </div>
-                    <div class="col-md-9 col-sm-9">
+                    <div class="col-md-3 col-sm-3">
+                        <select id="uploadProtocol" class="form-control" onchange="uploadProtocol()">
+                            <option value="ftp://" selected="selected">FTP</option>
+                            <option value="sftp://">SFTP</option>
+                            <option value="smb://">Windows Share</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-2">
+                        Server URI
+                    </div>
+                    <div class="col-md-5 col-sm-5">
                         <div class="input-group">
-                            <span class="input-group-addon" id="basic-addon1">ftp://</span>
-                            <input type="text" id="uploadURI" class="form-control" placeholder="server.uri" aria-describedby="basic-addon1" />
+                            <span class="input-group-addon" id="uploadUriProto">ftp://</span>
+                            <input type="text" id="uploadURI" class="form-control" placeholder="server.uri" aria-describedby="uploadUriProto" />
                         </div>
                     </div>
                 </div>
-                <div>
-                    <div class="col-md-3 col-sm-3">
-                        <p>Server Username</p>
+                <div style="margin:10px;">
+                    <div class="col-md-2 col-sm-2">
+                        Username
                     </div>
-                    <div class="col-md-3 col-sm-3">
+                    <div class="col-md-4 col-sm-4">
                         <input type="text" id="uploadUser" class="form-control" placeholder="username" />
                     </div>
-                    <div class="col-md-3 col-sm-3">
-                        <p>Server Password</p>
+                    <div class="col-md-2 col-sm-2">
+                        Password
                     </div>
-                    <div class="col-md-3 col-sm-3">
+                    <div class="col-md-4 col-sm-4">
                         <input type="password" id="uploadPwd" class="form-control" placeholder="password" />
                     </div>
                 </div>
-                <div>
-                <div class="col-md-3 col-sm-3">
-                        <p>Select Output Format</p>
+                <div style="margin:10px;">
+                    <div class="col-md-3 col-sm-3">
+                        Output Format
                     </div>
                     <div class="col-md-9 col-sm-9">
                         <select id="uploadTranscode" class="form-control" style="width:100%" onchange="tcodeFmt(this,'uploadOutExt')">
@@ -419,22 +462,20 @@
                         </select>
                     </div>
                 </div>
-                <div>
+                <div style="margin:10px;">
                     <div class="col-md-3 col-sm-3">
-                        <p>Output Filename</p>
+                        Output Filename
                     </div>
                     <div class="col-md-9 col-sm-9">
                         <div class="input-group">
-                            <input type="text" id="uploadOutName" class="form-control" placeholder="filename" aria-describedby="basic-addon2">
-                            <span id="uploadOutExt" class="input-group-addon" id="basic-addon2">.mp4</span>
+                            <input type="text" id="uploadOutName" class="form-control" placeholder="filename" aria-describedby="uploadOutExt">
+                            <span id="uploadOutExt" class="input-group-addon">.mp4</span>
                         </div>
                     </div>
                 </div>
-                <div>
-                    <div class="col-md-4 col-sm-4 hidden-xs">
-                        
-                    </div>
-                    <div class="col-md-4 col-sm-4 col-xs-12">
+                <div style="margin:10px;">
+                    <div class="col-md-3 col-sm-3 hidden-xs"></div>
+                    <div class="col-md-5 col-sm-5 col-xs-12">
                         <button type="button" id="uploadResumeBtn" class="btn btn-lg btn-spaced btn-default" onclick="uploadFile(1)" disabled><span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>&nbsp;REUPLOAD LAST</button>
                     </div>
                     <div class="col-md-4 col-sm-4 hidden-xs">
@@ -459,7 +500,8 @@
             <div id="pubProgressText" style="width:100%; text-align:center;"></div>
         </div>
         <div class="col-md-2 col-sm-2">
-            <button type="button" id="cancelBtn" class="btn btn-lg btn-danger" onclick="cancelPublish()" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;">CANCEL</button>
+            <button type="button" id="pubCancelBtn" class="btn btn-lg btn-danger" onclick="cancelPublish()" style="margin:8px; width:100%; padding-left:4px; padding-right:4px;">CANCEL</button>
+            <button type="button" id="pubErrBackBtn" class="btn btn-lg btn-default" onclick="clearPubError()" style="margin:8px; width:100%; padding-left:4px; padding-right:4px; display:none;">BACK</button>
         </div>
         
     </div>

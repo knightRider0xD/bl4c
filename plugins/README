@@ -28,9 +28,12 @@ exports.notify = function (signalName, value) {}
 
 system.sendNotice(signalName, value); will send a notification to the main system and ALL plugins with name pluginName_signalName, and value value.
 
+
 system.registerSioEvent(eventName, callback); will register a Socket.IO on event with name pluginName_eventName to call function callback when signaled. If event name is 'connected', the event will be triggered when a Socket.IO connection is received. 
 
 system.doSioEmit(signalName, value); will emit a Socket.IO signal with name pluginName_signalName and value value.
+
+system.doSioEmitTarget(addresses, signalName, value); will emit a Socket.IO signal with name pluginName_signalName and value value to only sockets that connected from an IP Address contained in the array addresses.
 
 
 system.getConfig(); will retrieve an object containing this module's section of the system config or undefined if it does not exist. Recommend using setConfigDefaults first.
@@ -44,3 +47,9 @@ system.setConfig(key, value); will save a value for key key in this module's sec
 system.getGlobalConfig(); will retrieve an object containing the global section of the system config.
 
 system.getGlobalConfig(key); will retrieve a value for key key from the global section of the system config or undefined if it does not exist.
+
+system.checkResource(resourceName); Acts as a mutex for system resources. Returns true if resource is available, false if resource not available. Only checks; DOES NOT RESERVE THE RESOURCE (see acquireResource() below).
+
+system.acquireResource(resourceName); Acts as a mutex for system resources. Acquires a resource. Returns true if successful, false if resource not available.
+
+system.releaseResource(resourceName); Acts as a mutex for system resources. Makes a previously acquired resource available and if the plugin making the call was the same one that currently has the resource. Returns true if successful, false otherwise.

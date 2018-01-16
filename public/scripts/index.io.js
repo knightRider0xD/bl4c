@@ -7,7 +7,7 @@ var lastMouse = {clientX:-1,clientY:-1};
 
 var atemStatus = {program:0,preview:0,aux:0,ftb:0,transLength:0.6,audioChannels:{"0":[0,0],"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],"7":[0,0],"8":[0,0], "1001":[0,0], "1201":[0,0]},dsk:[{live:false,tie:false},{live:false,tie:false}]};
 var enableALvls = 0;
-var transStyle = '';
+var transStyle = 'mix'; // possible values: 'none', 'cut', 'mix'
 var atemALvl = {audioLevels:{"0":[-100,-100],"1":[-100,-100],"2":[-100,-100],"3":[-100,-100],"4":[-100,-100],"5":[-100,-100],"6":[-100,-100],"7":[-100,-100],"8":[-100,-100], "1001":[-100,-100], "1201":[-100,-100]}};
 var mixerAChnls = [ {id:"1", name:"PC (HDMI)"}, {id:"2", name:"Video PC (HDMI)"}, {id:"3", name:"DESK (HDMI)"},
                     {id:"4", name:"Spare (HDMI)"}, {id:"7", name:"Video Converter (SDI)"}, {id:"8", name:"Spare (SDI)"},
@@ -15,48 +15,23 @@ var mixerAChnls = [ {id:"1", name:"PC (HDMI)"}, {id:"2", name:"Video PC (HDMI)"}
                         
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
 var mplayerStatus = {connected:0,playing:0};
+var vcallStatus = {system:0,login:0,call:0};
 var publisherStatus = {status:0,complete:0,lastDiscStatus:0,lastFileStatus:0};
+var publisherErrConfirm = 0;
 var publisherTranscodeOptions = [ {"mediatype":"video"},
     {"mediatype":"video", "filetype":"mp4", "vFormat":"scale=1920:1080", "vFRate":"25", "vCodec":"libx264", "vBitrate":"8000k", "aCodec":"aac", "aBitrate":"320k"},
     {"mediatype":"video", "filetype":"mp4", "vFormat":"scale=1280:720", "vFRate":"25", "vCodec":"libx264", "vBitrate":"5000k", "aCodec":"aac", "aBitrate":"320k"},
     {"mediatype":"video", "filetype":"mp4", "vFormat":"scale=960:540", "vFRate":"25", "vCodec":"libx264", "vBitrate":"3000k", "aCodec":"aac", "aBitrate":"320k"},
     {"mediatype":"video", "filetype":"mp4", "vFormat":"scale=640:360", "vFRate":"25", "vCodec":"libx264", "vBitrate":"1000k", "aCodec":"aac", "aBitrate":"320k"},
-    {"mediatype":"audio", "filetype":"mp3", "aCodec":"mp3", "aBitrate":"320k"},
-    {"mediatype":"audio", "filetype":"mp3", "aCodec":"mp3", "aBitrate":"160k"},
-    {"mediatype":"audio", "filetype":"mp3", "aCodec":"mp3", "aBitrate":"96k"},
-    {"mediatype":"audio", "filetype":"mp3", "aCodec":"mp3", "aBitrate":"64k"}];
+    {"mediatype":"audio", "filetype":"mp3", "aCodec":"libmp3lame", "aBitrate":"320k"},
+    {"mediatype":"audio", "filetype":"mp3", "aCodec":"libmp3lame", "aBitrate":"160k"},
+    {"mediatype":"audio", "filetype":"mp3", "aCodec":"libmp3lame", "aBitrate":"96k"},
+    {"mediatype":"audio", "filetype":"mp3", "aCodec":"libmp3lame", "aBitrate":"64k"}];
 
 var slideControlMouseDown = '';
 
 var aMixers = {};
 
-guiElements = {
-    mainPages:[],
-    mainTabs:[],
-    recordSpaceRemain:0,
-    recordStatus:0,
-    settings:0,
-    mediaPause:0,
-    mediaStop:0,
-    mediaSelect:0,
-    mediaTitle:0,
-    mediaStartPosM:0,
-    mediaStartPosS:0,
-    ptzCams:[],
-    publishPages:[],
-    publishTabs:[],
-    controlContainer:0,
-    progressContainer:0,
-    burnerStartBtn:0,
-    fileStartBtn:0,
-    uploadURI:0,
-    uploadUser:0,
-    uploadPwd:0,
-    uploadOutName:0,
-    uploadStartBtn:0,
-    progressText:0,
-    currentProgress:0
-}
 
 function menu(){
     
@@ -90,6 +65,7 @@ function publish(){
     enableAtemAlvls(false);
     
     socket.emit('publisher_getFileList');
+    socket.emit('publisher_getRemovableList');
     
 }
 
@@ -112,8 +88,10 @@ function onAtemUpdate(status){
     guiPreviewSwitcher(); //set preview
     guiAuxSwitcher(); //set aux
     guiTransLength(); //set translength
-    for (var i = 0; i < guiElements.aMixers.length; i++) {
-        guiAudioChannel(i); // Update audio mixer volumes for each mixer
+    
+    var mixerNames = Object.keys(aMixers);
+    for (var i = 0; i < mixerNames.length; i++) {
+        guiAudioChannel(mixerNames[i]); // Update audio mixer volumes for each mixer
     }
 }
 
@@ -123,8 +101,9 @@ function onAtemAudioLevel(levels){
     if(enableALvls) {
         atemALvl = levels;
         
-        for (var i = 0; i < guiElements.aMixers.length; i++) {
-            guiAudioLevel(i); // Update audio mixer levels for each mixer
+        var mixerNames = Object.keys(aMixers);
+        for (var i = 0; i < mixerNames.length; i++) {
+            guiAudioLevel(mixerNames[i]); // Update audio mixer levels for each mixer
         }
     }
 }
@@ -141,7 +120,15 @@ function onMplayerUpdate(status){
     mplayerStatus = status;
     //console.log(status);
     
-    guiMplayer(); //set record
+    guiMplayer(); //update media player
+    
+}
+
+function onVcallerUpdate(status){
+    vcallStatus = status;
+    //console.log(status);
+    
+    guiVcaller(); //update video caller
     
 }
 
@@ -224,10 +211,12 @@ function volChange(ev, mixerId){
     lastMouse = ev;
 }
 
-function volEndChange(){
-    var mixer = slideControlMouseDown;
+function volEndChange(mixerId){
+    if(slideControlMouseDown!=mixerId){
+        return;
+    }
     slideControlMouseDown = '';
-    guiAudioChannel(mixer);
+    guiAudioChannel(mixerId);
 }
 
 
@@ -246,27 +235,33 @@ function stopRecord(){
 
 function playMedia(){
     
-    var media = guiElements.mediaSelect.options[guiElements.mediaSelect.selectedIndex].value;
+    var media = $('#mediaSelect').val();
+    var start = ((parseInt($('#mediaStartPosM').val())*60)+parseInt($('#mediaStartPosS').val()));
+    var title = $('#mediaTitle').val();
     
-    if(guiElements.mediaSelect.selectedIndex == 0){
+    if(media == 0){
         return; // nothing selected
     } else if(media=='recstream'){
         media = 'http://192.168.10.232:5000/ :network-caching=200';
     } else if(media=='bluray'){
-        media = 'bluray:///dev/sr0#'+guiElements.mediaTitle.value+' :disc-caching=300 :start-time='+((parseInt(guiElements.mediaStartPosM.value)*60)+parseInt(guiElements.mediaStartPosS.value));
+        media = 'bluray:///dev/sr0#'+title+' :disc-caching=300 :start-time='+start;
     } else if(media=='dvd'){
-        media = 'dvdsimple:///dev/sr0#'+guiElements.mediaTitle.value+' :disc-caching=300 :start-time='+((parseInt(guiElements.mediaStartPosM.value)*60)+parseInt(guiElements.mediaStartPosS.value));
+        media = 'dvdsimple:///dev/sr0#'+title+' :disc-caching=300 :start-time='+start;
     } else if(media=='vcd'){
-        media = 'vcd:///dev/sr0#'+guiElements.mediaTitle.value+' :disc-caching=300 :start-time='+((parseInt(guiElements.mediaStartPosM.value)*60)+parseInt(guiElements.mediaStartPosS.value));
+        media = 'vcd:///dev/sr0#'+title+' :disc-caching=300 :start-time='+start;
     } else if(media=='cdda'){
-        media = 'cdda:///dev/sr0 :cdda-track='+guiElements.mediaTitle.value+' :disc-caching=300 :start-time='+((parseInt(guiElements.mediaStartPosM.value)*60)+parseInt(guiElements.mediaStartPosS.value));
+        media = 'cdda:///dev/sr0 :cdda-track='+title+' :disc-caching=300 :start-time='+start;
+    } else if(media=='mrl'){
+        media = $('#mediaMRL').val();
     } else {
-        media = media + ' :start-time='+((parseInt(guiElements.mediaStartPosM.value)*60)+parseInt(guiElements.mediaStartPosS.value));
+        media = media + ' :start-time='+start;
     }
     
     //console.log(media);
     socket.emit('mediaplayer_play', media);
 }
+    
+
     
 function pauseMedia(){
     socket.emit('mediaplayer_pause');
@@ -274,6 +269,37 @@ function pauseMedia(){
     
 function stopMedia(){
     socket.emit('mediaplayer_stop');
+}
+
+function loginCall(){
+    var service = $('#mediaSelect').val();
+    var user = '';
+    var pass = '';
+    
+    if(service == 'messenger'){
+        user = $('#messengerUser').val();
+        pass = $('#messengerPass').val();
+    } else if(service == 'hangouts'){
+        user = $('#messengerUser').val();
+        pass = $('#messengerPass').val();
+    }
+    
+    socket.emit('videocaller_caller_login', {'service':service, 'user':user, 'pass':pass});
+}
+
+function startCall(){
+    var service = $('#mediaSelect').val();
+    var contact = '';
+    
+    if(service == 'messenger'){
+        contact = $('#messengerContact').val();
+    }
+    
+    socket.emit('videocaller_caller_start_call', {'contact':contact});
+}
+
+function endCall(){
+    socket.emit('videocaller_caller_end_call');
 }
 
 /**
@@ -298,19 +324,40 @@ function guiPTZCameraSwitcher(cam){
  */
 function guiMainPageSwitcher(page){
     
-    var length = (guiElements.mainPages.length < guiElements.mainTabs.length) ? guiElements.mainPages.length : guiElements.mainTabs.length;
+    $('.index-tab.active').removeClass('active');
+    $('.index-page').hide();
     
-    for (var i = 0; i < length; i++) {
-        if(i==page){
-            guiElements.mainTabs[i].className = "indexTab active";
-            guiElements.mainPages[i].style.display = "block";
-        } else {
-            guiElements.mainTabs[i].className = "indexTab";
-            guiElements.mainPages[i].style.display = "none";
+    $('.index-tab.tab-'+page).addClass('active');
+    $('.index-page.page-'+page).show();
+    
+    if(page=='vswitch'){
+        enableAtemAlvls(false);
+        
+    } else if(page=='amixers'){
+        enableAtemAlvls(true);
+        
+        var mixerNames = Object.keys(aMixers);
+        for (var i = 0; i < mixerNames.length; i++) {
+            guiAudioChannel(mixerNames[i]); // Update audio mixer volumes for each mixer
         }
+        
+    } else if(page=='ptz'){
+        enableAtemAlvls(false);
+        
+        $('div.ptz-hitbox').each(function() {
+            var slider = $( this ).siblings('.ptz-slider');
+            slider.css('top', (($( this ).outerHeight()/2)-(slider.outerHeight()/2))+'px');
+            slider.css('left', (($( this ).outerWidth()/2)-(slider.outerWidth()/2))+'px');
+        });
+        
+    } else if(page=='mplayer'){
+        enableAtemAlvls(false);
+        guiMselect();
+        
+    } else if(page=='record'){
+        enableAtemAlvls(false);
+        
     }
-    
-    enableAtemAlvls((page==1));
     
 }
 
@@ -462,8 +509,8 @@ function guiAudioLevel(mixerId){
     //Set level
     var linScaledPercentL = Math.pow(Math.abs(atemALvl.audioLevels[chnl][0]/60),0.625);
     var linScaledPercentR = Math.pow(Math.abs(atemALvl.audioLevels[chnl][1]/60),0.625);
-    aLvlL.css('height', (linScaledPercentL*80)+"%;");
-    aLvlL.css('height', (linScaledPercentR*80)+"%;");
+    aLvlL.css('height', (linScaledPercentL*80)+"%");
+    aLvlL.css('height', (linScaledPercentR*80)+"%");
             
 }
 
@@ -521,23 +568,90 @@ function guiRecord(){
 function guiMplayer(){
     
     if(mplayerStatus.playing==0){
-        guiElements.mediaPause.disabled = true;
-        guiElements.mediaPause.innerHTML = '<span class="glyphicon glyphicon-pause" aria-hidden="true"></span>&nbsp;PAUSE PLAYBACK&nbsp;';
+        $('#mediaPause').attr("disabled","true");
+        $('#mediaPause').html('<span class="glyphicon glyphicon-pause" aria-hidden="true"></span>&nbsp;PAUSE PLAYBACK&nbsp;');
     } else if(mplayerStatus.playing==1){
-        guiElements.mediaPause.disabled = false;
-        guiElements.mediaPause.innerHTML = '<span class="glyphicon glyphicon-pause" aria-hidden="true"></span>&nbsp;PAUSE PLAYBACK&nbsp;';
+        $('#mediaPause').removeAttr('disabled');
+        $('#mediaPause').html('<span class="glyphicon glyphicon-pause" aria-hidden="true"></span>&nbsp;PAUSE PLAYBACK&nbsp;');
     } else if(mplayerStatus.playing==2){
-        guiElements.mediaPause.disabled = false;
-        guiElements.mediaPause.innerHTML = '<span class="glyphicon glyphicon-play" aria-hidden="true"></span>&nbsp;RESUME PLAYBACK';
+        $('#mediaPause').removeAttr('disabled');
+        $('#mediaPause').html('<span class="glyphicon glyphicon-play" aria-hidden="true"></span>&nbsp;RESUME PLAYBACK');
     }
     
 }
 
+/**
+ * Updates the interface's video call (mplayer) buttons
+ */
+function guiVcaller(){
+    
+    if(vcallStatus.system==0){
+        $('#callLogin').removeAttr('disabled');
+        $('#callStart').attr("disabled","true");
+        $('#callEnd').attr("disabled","true");
+    } else if(vcallStatus.login==0){
+        $('#callLogin').removeAttr('disabled');
+        $('#callStart').attr("disabled","true");
+        $('#callEnd').removeAttr('disabled');
+    } else {
+        $('#callLogin').attr("disabled","true");
+        $('#callStart').removeAttr('disabled');
+        $('#callEnd').removeAttr('disabled');
+    }
+    
+}
+
+function guiMselect(){
+    
+    var selected = $('#mediaSelect').val();
+    
+    console.log(selected);
+    
+    $('.media-config').hide();
+    
+    
+    if(selected=='recstream'){
+        $('.btn-media-call').hide();
+        $('.btn-media-av').show();
+    } else if(selected=='cdda'){
+        $('.btn-media-call').hide();
+        $('.btn-media-av').show();
+        $('#mediaStdConfig').show();
+        $('#mediaTitleLabel').text('TRACK');
+    } else if(selected=='mrl'){
+        $('.btn-media-call').hide();
+        $('.btn-media-av').show();
+        $('#mediaCustConfig').show();
+    } else if(selected=='hangouts'){
+        $('.btn-media-av').hide();
+        $('.btn-media-call').show();
+        $('#callHangoutsConfig').show();
+    } else if(selected=='messenger'){
+        $('.btn-media-av').hide();
+        $('.btn-media-call').show();
+        $('#callMessengerConfig').show();
+    } else if(selected=='skype'){
+        $('.btn-media-av').hide();
+        $('.btn-media-call').show();
+        $('#callSkypeConfig').show();
+    } else {
+        $('.btn-media-call').hide();
+        $('.btn-media-av').show();
+        $('#mediaStdConfig').show();
+        $('#mediaTitleLabel').text('TITLE');
+    }
+    
+}
 
 //camera stuff
 
 function ptzReset(control){
 
+    //Prevent mouseLeave events from triggering reset unless mouse was down.
+    if(slideControlMouseDown!=control){
+        return;
+    }
+    
     slideControlMouseDown = '';
     
     if(control){
@@ -681,7 +795,19 @@ function onFileList(list){
     
     // Write new elements
     for (var i = 0; i < list.length; i++) {
-        $('#sourceFileList').append('<li class="list-group-item" style="padding:0"><button style="border:0;padding:4px 14px;background:none;float:right;font-size:1.6em;" onclick="copyToPublishList('+"'"+list[i]+"'"+')"><span class="glyphicon glyphicon-plus"></span></button><div style="padding:10px;">'+list[i]+'</div></li>');
+        $('#sourceFileList').prepend('<li class="publish-add-remove list-group-item" style="padding:0"><button onclick="copyToPublishList('+"'"+list[i]+"'"+')"><span class="glyphicon glyphicon-plus"></span></button><div>'+list[i]+'</div></li>');
+    }
+    
+}
+
+function onRemovableList(list){
+    
+    // Clear list
+    $('#fileDestDevice').empty();
+    
+    // Write new elements
+    for (var i = 0; i < list.length; i++) {
+        $('#fileDestDevice').append('<option>'+list[i]+'</option>');
     }
     
 }
@@ -708,12 +834,25 @@ function guiPublishProgress(){
         $('#pubControl'  ).hide();
         $('#pubProgress' ).hide();
         $('#pubRecording').show();
-    } else if (publisherStatus.status){
+    } else if (publisherErrConfirm){
         $('#pubControl'  ).hide();
         $('#pubRecording').hide();
         $('#pubProgress' ).show();
-        $('#pubCurrentProgress').css('width',(publisherStatus.complete*100)+"%;");
+    } else if (publisherStatus.status){
+        if(publisherStatus.complete<0){
+            publisherStatus.complete *= -1; 
+            publisherErrConfirm = 1;
+            $('#pubCancelBtn').hide();
+            $('#pubErrBackBtn').show();
+            $('#pubCurrentProgress').removeClass('progress-bar-primary active');
+            $('#pubCurrentProgress').addClass('progress-bar-danger');
+        }
+        $('#pubControl'  ).hide();
+        $('#pubRecording').hide();
+        $('#pubProgress' ).show();
+        $('#pubCurrentProgress').css('width',(Math.round(publisherStatus.complete*100))+"%");
         $('#pubProgressText').html(publisherStatus.status);
+        
     } else {
         $('#pubRecording').hide();
         $('#pubProgress' ).hide();
@@ -768,6 +907,10 @@ function tcodeFmt(src, extLbl) {
     }
 }
 
+function uploadProtocol() {
+    $('#uploadUriProto').text($('#uploadProtocol').val());
+}
+
 function burnDisc(resume){
     
     var fileList = [];
@@ -787,14 +930,15 @@ function uploadFile(resume){
         fileList.push($( this ).text());
     });
     
-    var uri =   $("#uploadURI"    ).val();
-    var user =  $("#uploadUser"   ).val();
-    var pwd =   $("#uploadPwd"    ).val();
-    var fname = $("#uploadOutName").val();
-    var tcode = publisherTranscodeOptions[$('uploadTranscode').val()];
+    var proto = $("#uploadProtocol").val();
+    var uri   = $("#uploadURI"     ).val();
+    var user  = $("#uploadUser"    ).val();
+    var pwd   = $("#uploadPwd"     ).val();
+    var fname = $("#uploadOutName" ).val();
+    var tcode = publisherTranscodeOptions[$('#uploadTranscode').val()];
     
     socket.emit('publisher_uploadFile', { resume:resume,sourceFNames:fileList,destFName:fname,
-                                        transcode:tcode,server:uri,username:user,password:pwd});
+                                        transcode:tcode,protocol:proto,server:uri,username:user,password:pwd});
 }
 
 function copyFile(resume){
@@ -806,7 +950,7 @@ function copyFile(resume){
     
     var uri =   $("#fileDestDevice").val();
     var fname = $("#fileOutName"   ).val();
-    var tcode = publisherTranscodeOptions[$('fileTranscode').val()];
+    var tcode = publisherTranscodeOptions[$('#fileTranscode').val()];
     
     socket.emit('publisher_copyFile', { resume:resume,sourceFNames:fileList,destFName:fname,
                                         transcode:tcode,device:uri});
@@ -814,6 +958,17 @@ function copyFile(resume){
 
 function cancelPublish(){
     socket.emit('publisher_cancel');
+}
+
+function clearPubError(){
+    $('#pubErrBackBtn').hide();
+    $('#pubCancelBtn').show();
+    $('#pubCurrentProgress').removeClass('progress-bar-danger');
+    $('#pubCurrentProgress').addClass('progress-bar-primary active');
+    publisherStatus.status = 0;
+    publisherStatus.complete = 0;
+    publisherErrConfirm = 0;
+    guiPublishProgress();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -838,8 +993,10 @@ function connectServer(){
     socket.on("atem_alvls", function (levels) {onAtemAudioLevel(levels);});
     socket.on("recorder_update", function (status) {onRecorderUpdate(status);});
     socket.on("mediaplayer_update", function (status) {onMplayerUpdate(status);});
+    socket.on("videocaller_update", function (status) {onVcallerUpdate(status);});
     socket.on("publisher_update", function (status) {onPublisherUpdate(status);});
     socket.on("publisher_fileList", function (list) {console.log(list); onFileList(list);});
+    socket.on("publisher_removableDisks", function (list) {console.log(list); onRemovableList(list);});
 }
 
 /**
@@ -924,8 +1081,8 @@ function generateAMixer(id, channels, defaultCh, fader, mute, levels){
     var hitbox = newMixer.filter('div.amixer-volume-div').find('div.volume-hitbox');
     hitbox.mousedown(function(ev) {volInitChange(ev,mixerId);});
     hitbox.mousemove(function(ev) {volChange(ev,mixerId);});
-    hitbox.mouseleave(function(ev) {volEndChange(ev);});
-    hitbox.mouseup(function(ev) {volEndChange(ev);});
+    hitbox.mouseleave(function(ev) {volEndChange(mixerId);});
+    hitbox.mouseup(function(ev) {volEndChange(mixerId);});
     hitbox.on({ 'touchstart touchmove touchend touchcancel' : absorbEvent_ });
 
     // Add to dict
@@ -938,26 +1095,6 @@ function generateAMixer(id, channels, defaultCh, fader, mute, levels){
  * Connects GUI elements to vars for easy access
  */
 function setupGui(){
-    
-    guiElements.mainPages = document.getElementsByClassName("indexPage");
-    guiElements.mainTabs = document.getElementsByClassName("indexTab");
-    
-    guiElements.mediaPause = document.getElementById("mediaPause");
-    guiElements.mediaStop = document.getElementById("mediaStop");
-    guiElements.mediaSelect = document.getElementById("mediaSelect");
-    guiElements.mediaTitle = document.getElementById("mediaTitle");
-    guiElements.mediaStartPosM = document.getElementById("mediaStartPosM");
-    guiElements.mediaStartPosS = document.getElementById("mediaStartPosS");
-    
-    guiElements.burnerStartBtn = document.getElementById("burnerStartBtn");
-    guiElements.fileStartBtn = document.getElementById("fileStartBtn");
-    
-    guiElements.uploadURI = document.getElementById("uploadURI");
-    guiElements.uploadUser = document.getElementById("uploadUser");
-    guiElements.uploadPwd = document.getElementById("uploadPwd");
-    guiElements.uploadOutName = document.getElementById("uploadOutName");
-    guiElements.uploadStartBtn = document.getElementById("uploadStartBtn");
-    
     
     //Populate mixer placeholders
     $('div.amixer').each(function() {

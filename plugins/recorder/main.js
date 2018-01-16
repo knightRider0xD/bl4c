@@ -1,5 +1,5 @@
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
-var publisherStatus = {status:0,complete:0,locked:0};
+var publisherStatus = {publishing:0};
 var recorder = 0;
 
 var spawn  = require('child_process').spawn;
@@ -66,7 +66,6 @@ function connectToRecorder(){
     getRemainingRecordingSpace();
     
     if(recorder){
-        system.sendNotice('update', recorderStatus);
         system.doSioEmit('update', recorderStatus);
         console.log('Recorder already initialised');
         return;
@@ -122,7 +121,6 @@ function startRecording(){
     if(exiting){return;}
     
     if(!recorder){
-        system.sendNotice('update', recorderStatus);
         system.doSioEmit('update', recorderStatus);
         console.log('Recorder Offline');
         return;
@@ -135,9 +133,8 @@ function startRecording(){
         return;
     }
     
-    if(publisherStatus.status != 0){
+    if(publisherStatus.publishing != 0){
         console.log('Publishing; cannot record.');
-        system.sendNotice('update', recorderStatus);
         system.doSioEmit('update', recorderStatus);
         return;
     }
