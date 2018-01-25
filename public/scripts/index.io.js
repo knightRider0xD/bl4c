@@ -12,10 +12,11 @@ var atemALvl = {audioLevels:{"0":[-100,-100],"1":[-100,-100],"2":[-100,-100],"3"
 var mixerAChnls = [ {id:"1", name:"PC (HDMI)"}, {id:"2", name:"Video PC (HDMI)"}, {id:"3", name:"DESK (HDMI)"},
                     {id:"4", name:"Spare (HDMI)"}, {id:"7", name:"Video Converter (SDI)"}, {id:"8", name:"Spare (SDI)"},
                     {id:"1201", name:"Mixer A (RCA)"}, {id:"1001", name:"Mics (XLR)"}];
-                        
+var ptzPresetNames = [['Lectern','Center','W.Lead','Table','Wide','Band'],
+                      ['Lectern','Center','W.Lead','Table','Wide','Band']];
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
 var mplayerStatus = {connected:0,playing:0};
-var vcallStatus = {system:0,login:0,call:0};
+var vcallStatus = {status:'',system:0,login:0,call:0};
 var publisherStatus = {status:0,complete:0,lastDiscStatus:0,lastFileStatus:0};
 var publisherErrConfirm = 0;
 var publisherTranscodeOptions = [ {"mediatype":"video"},
@@ -35,6 +36,7 @@ var aMixers = {};
 
 function menu(){
     
+    $('#basic').hide();
     $('#main').hide();
     $('#publish').hide();
     $('#settings').hide();
@@ -44,8 +46,26 @@ function menu(){
     
 }
 
+function basic(){
+    
+    $('#main').hide();
+    $('#menu').hide();
+    $('#publish').hide();
+    $('#settings').hide();
+    $('#basic').show();
+    
+    enableAtemAlvls(true);
+        
+    var mixerNames = Object.keys(aMixers);
+    for (var i = 0; i < mixerNames.length; i++) {
+        guiAudioChannel(mixerNames[i]); // Update audio mixer volumes for each mixer
+    }
+    
+}
+
 function main(){
     
+    $('#basic').hide();
     $('#menu').hide();
     $('#publish').hide();
     $('#settings').hide();
@@ -57,6 +77,7 @@ function main(){
 
 function publish(){
     
+    $('#basic').hide();
     $('#main').hide();
     $('#menu').hide();
     $('#settings').hide();
@@ -71,6 +92,7 @@ function publish(){
 
 function settings(){
     
+    $('#basic').hide();
     $('#main').hide();
     $('#menu').hide();
     $('#publish').hide();
@@ -98,6 +120,7 @@ function onAtemUpdate(status){
 
 function onAtemAudioLevel(levels){
     
+    
     if(enableALvls) {
         atemALvl = levels;
         
@@ -108,37 +131,36 @@ function onAtemAudioLevel(levels){
     }
 }
 
+function onPtzPresetNames(names){
+    //console.log(names);
+    ptzPresetNames = names;
+    guiPtzPresetNames();
+}
+
 function onRecorderUpdate(status){
-    recorderStatus = status;
     //console.log(status);
-    
+    recorderStatus = status;
     guiRecord(); //set record
-    
 }
 
 function onMplayerUpdate(status){
-    mplayerStatus = status;
     //console.log(status);
-    
+    mplayerStatus = status;
     guiMplayer(); //update media player
     
 }
 
 function onVcallerUpdate(status){
-    vcallStatus = status;
     //console.log(status);
-    
+    vcallStatus = status;
     guiVcaller(); //update video caller
-    
 }
 
 function onPublisherUpdate(status){
-    publisherStatus = status;
     //console.log(status);
-    
+    publisherStatus = status;
     guiRecord(); //set record
     guiPublishProgress(); //set publish
-    
 }
 
 
@@ -280,11 +302,11 @@ function loginCall(){
         user = $('#messengerUser').val();
         pass = $('#messengerPass').val();
     } else if(service == 'hangouts'){
-        user = $('#messengerUser').val();
-        pass = $('#messengerPass').val();
+        user = $('#hangoutsUser').val();
+        pass = $('#hangoutsPass').val();
     }
     
-    socket.emit('videocaller_caller_login', {'service':service, 'user':user, 'pass':pass});
+    socket.emit('videocaller_login', {'service':service, 'user':user, 'pass':pass});
 }
 
 function startCall(){
@@ -295,28 +317,11 @@ function startCall(){
         contact = $('#messengerContact').val();
     }
     
-    socket.emit('videocaller_caller_start_call', {'contact':contact});
+    socket.emit('videocaller_start_call', {'contact':contact});
 }
 
 function endCall(){
-    socket.emit('videocaller_caller_end_call');
-}
-
-/**
- * Sets the Active PTZ Camera
- */
-function guiPTZCameraSwitcher(cam){
-    
-    ptz.camera = cam
-    
-    //Clear the highlighted button
-    var highlighted = $('.ptz-cam-tab.active');
-    highlighted.removeClass('active');
-    
-    //Highlight new button
-    var nextHighlighted = $('.ptz-cam-tab.cam-'+cam);
-    nextHighlighted.addClass('active');
-    
+    socket.emit('videocaller_end_call');
 }
 
 /**
@@ -379,9 +384,9 @@ function guiProgramSwitcher(){
     //Highlight Keyer Buttons
     for(var i=0; i< atemStatus.dsk.length; i++){
         if(atemStatus.dsk[i].live){
-            var nextDsk = $('.prevBtn.prev-50'+((i+1)*10));
-            nextHighlighted.removeClass('btn-prog');
-            nextHighlighted.addClass('btn-danger');
+            var nextDsk = $('.progBtn.prog-50'+((i+1)*10));
+            nextDsk.removeClass('btn-prog');
+            nextDsk.addClass('btn-danger');
         }
     }
 }
@@ -405,8 +410,8 @@ function guiPreviewSwitcher(){
     for(var i=0; i< atemStatus.dsk.length; i++){
         if((atemStatus.dsk[i].live && !atemStatus.dsk[i].tie) || (!atemStatus.dsk[i].live && atemStatus.dsk[i].tie)){
             var nextDsk = $('.prevBtn.prev-50'+((i+1)*10));
-            nextHighlighted.removeClass('btn-prev');
-            nextHighlighted.addClass('btn-success');
+            nextDsk.removeClass('btn-prev');
+            nextDsk.addClass('btn-success');
         }
     }
 }
@@ -460,20 +465,20 @@ function guiAudioChannel(mixerId){
         //Set mute
         if (atemStatus.audioChannels[chnl][0]){
             
-            var levelsDiv = aMixers[mixerId].filter('div.amixer-levels');
+            var levelsDiv = aMixers[mixerId].filter('div.amixer-levels-div');
             levelsDiv.removeClass('amixer-muted');
             
-            var muteBtn = aMixers[mixerId].filter('div.amixer-levels').find('button.btn-mute');
+            var muteBtn = aMixers[mixerId].filter('div.amixer-levels-div').find('button.btn-mute');
             muteBtn.removeClass('btn-default');
             muteBtn.addClass('btn-success');
             muteBtn.text('LIVE');
             
         } else {
            
-            var levelsDiv = aMixers[mixerId].filter('div.amixer-levels');
+            var levelsDiv = aMixers[mixerId].filter('div.amixer-levels-div');
             levelsDiv.addClass('amixer-muted');
             
-            var muteBtn = aMixers[mixerId].filter('div.amixer-levels').find('button.btn-mute');
+            var muteBtn = aMixers[mixerId].filter('div.amixer-levels-div').find('button.btn-mute');
             muteBtn.removeClass('btn-success');
             muteBtn.addClass('btn-default');
             muteBtn.text('MUTED');
@@ -507,10 +512,12 @@ function guiAudioLevel(mixerId){
     var aLvlR = aMixers[mixerId].filter('.amixer-levels-div').find('div.level-bar.level-right div.level-value');
     
     //Set level
-    var linScaledPercentL = Math.pow(Math.abs(atemALvl.audioLevels[chnl][0]/60),0.625);
-    var linScaledPercentR = Math.pow(Math.abs(atemALvl.audioLevels[chnl][1]/60),0.625);
-    aLvlL.css('height', (linScaledPercentL*80)+"%");
-    aLvlL.css('height', (linScaledPercentR*80)+"%");
+    //var linScaledPercentL = Math.pow(Math.abs(atemALvl.audioLevels[chnl][0]/60),0.625);
+    //var linScaledPercentR = Math.pow(Math.abs(atemALvl.audioLevels[chnl][1]/60),0.625);
+    var linScaledPercentL = Math.log((0.1*Math.abs(atemALvl.audioLevels[chnl][0]))+1)/2;
+    var linScaledPercentR = Math.log((0.1*Math.abs(atemALvl.audioLevels[chnl][1]))+1)/2;
+    aLvlL.css('height', (linScaledPercentL*100)+"%");
+    aLvlR.css('height', (linScaledPercentR*100)+"%");
             
 }
 
@@ -518,7 +525,36 @@ function guiTransLength(){
     $('#transLength').val(atemStatus.transLength*1000);
 }
 
-//recorder stuff
+/**
+ * Sets the Active PTZ Camera
+ */
+function guiPTZCameraSwitcher(cam){
+    
+    ptz.camera = cam;
+    
+    //Clear the highlighted button
+    var highlighted = $('.ptz-cam-tab.active');
+    highlighted.removeClass('active');
+    
+    //Highlight new button
+    var nextHighlighted = $('.ptz-cam-tab.cam-'+cam);
+    nextHighlighted.addClass('active');
+    
+    //Update preset names
+    guiPtzPresetNames();
+    
+}
+
+function guiPtzPresetNames(){
+    for(var cam=0; cam<ptzPresetNames.length; cam++){
+        for(var preset=0; preset<ptzPresetNames[cam].length; preset++){
+            $('.cam_preset_name.cam_'+(cam+1)+'_preset_'+preset).val(ptzPresetNames[cam][preset]);
+            if((cam+1)==ptz.camera){
+                $('.cam_preset.cam_preset_'+preset).text(ptzPresetNames[cam][preset]);
+            }
+        }
+    }
+}
 
 /**
  * Updates the interface's record buttons
@@ -585,6 +621,8 @@ function guiMplayer(){
  */
 function guiVcaller(){
     
+    $('#callStatus').html(vcallStatus.status);
+    
     if(vcallStatus.system==0){
         $('#callLogin').removeAttr('disabled');
         $('#callStart').attr("disabled","true");
@@ -626,14 +664,17 @@ function guiMselect(){
         $('.btn-media-av').hide();
         $('.btn-media-call').show();
         $('#callHangoutsConfig').show();
+        $('#callStatus').show();
     } else if(selected=='messenger'){
         $('.btn-media-av').hide();
         $('.btn-media-call').show();
         $('#callMessengerConfig').show();
+        $('#callStatus').show();
     } else if(selected=='skype'){
         $('.btn-media-av').hide();
         $('.btn-media-call').show();
         $('#callSkypeConfig').show();
+        $('#callStatus').show();
     } else {
         $('.btn-media-call').hide();
         $('.btn-media-av').show();
@@ -652,7 +693,7 @@ function ptzReset(control){
         return;
     }
     
-    slideControlMouseDown = '';
+    slideControlMouseDown = null;
     
     if(control){
         var hitbox = $('#'+control+' div.ptz-hitbox');
@@ -662,7 +703,9 @@ function ptzReset(control){
         slider.css('left', ((hitbox.outerWidth()/2)-(slider.outerWidth()/2))+'px');
     }
     
-    socket.emit('visca_sendPtzCmd', {camera:ptz.camera,pan:0,tilt:0,zoom:0});
+    ptz = {camera:ptz.camera,pan:0,tilt:0,zoom:0};
+    
+    socket.emit('visca_doPtzCmd', ptz);
     console.log('PTZ reset');
     
 }
@@ -690,7 +733,9 @@ function ptzZoom(ev, control){
         
         slider.css('top', (ev.offsetY-(slider.outerHeight()/2))+'px');
         
-        tilt = Math.round(((ev.offsetY/hitbox.outerHeight()) - 0.5)*-12.0);
+        zoom = Math.round(((ev.offsetY/hitbox.outerHeight()) - 0.5)*-12.0);
+        
+        lastMouse = ev;
         
     } else {
         
@@ -700,11 +745,13 @@ function ptzZoom(ev, control){
             zoom = -3;
         }
         
+        lastMouse = {clientX:-1,clientY:-1};
+        
     }
 
     if(zoom!=ptz.zoom){
         ptz.zoom = zoom;
-        socket.emit('visca_sendPtzCmd', {camera:ptz.camera,
+        socket.emit('visca_doPtzCmd', {camera:ptz.camera,
                                     pan:0,
                                     tilt:0,
                                     zoom:ptz.zoom});
@@ -714,7 +761,6 @@ function ptzZoom(ev, control){
                                     zoom:ptz.zoom});
     }
     
-    lastMouse = ev;
     
 }
 
@@ -747,6 +793,8 @@ function ptzPan(ev, control){
         pan  = Math.round(((ev.offsetX/hitbox.outerWidth() ) - 0.5)*18.0);
         tilt = Math.round(((ev.offsetY/hitbox.outerHeight()) - 0.5)*-14.0);
         
+        lastMouse = ev;
+        
     } else {
         
         if(control == 'up') {
@@ -759,13 +807,15 @@ function ptzPan(ev, control){
             pan = 3;
         }
         
+        lastMouse = {clientX:-1,clientY:-1};
+        
     }
         
     if(pan!=ptz.pan || tilt!=ptz.tilt){
         ptz.pan = pan;
         ptz.tilt = tilt;
 
-        socket.emit('visca_sendPtzCmd', {camera:ptz.camera,
+        socket.emit('visca_doPtzCmd', {camera:ptz.camera,
                                     pan:ptz.pan,
                                     tilt:ptz.tilt,
                                     zoom:0});
@@ -776,13 +826,15 @@ function ptzPan(ev, control){
                                     zoom:0});
     }
     
-    lastMouse = ev;
 }
 
+function ptzSetPreset(camera,preset){
+    var name = $('.cam_preset_name.cam_'+camera+'_preset_'+preset).val();
+    socket.emit('visca_savePtzPreset', {camera:camera,slot:preset,name:name});
+}
 
 function ptzRecallPreset(preset){
-    socket.emit('visca_sendPtzRecall', {camera:ptz.camera,
-                                slot:preset});
+    socket.emit('visca_recallPtzPreset', {camera:ptz.camera,slot:preset});
 }
 
 
@@ -971,6 +1023,10 @@ function clearPubError(){
     guiPublishProgress();
 }
 
+function reloadPlugin(pName){
+    socket.emit(pName+'_reload');
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -991,6 +1047,7 @@ function connectServer(){
     socket.on("connect", function () {console.log("Connected!");});
     socket.on("atem_update", function (status) {onAtemUpdate(status);});
     socket.on("atem_alvls", function (levels) {onAtemAudioLevel(levels);});
+    socket.on("visca_presets", function (presets) {onPtzPresetNames(presets);});
     socket.on("recorder_update", function (status) {onRecorderUpdate(status);});
     socket.on("mediaplayer_update", function (status) {onMplayerUpdate(status);});
     socket.on("videocaller_update", function (status) {onVcallerUpdate(status);});
@@ -1042,7 +1099,7 @@ function generateAMixer(id, channels, defaultCh, fader, mute, levels){
     mixerHtml +=        '<div class="amixer-levels-div levels-enabled">\n';
     if(mute) {
         mixerHtml +=    '    <button type="button" class="btn btn-tall btn-default btn-mute"\n'+
-                        '            onclick="setAtemAudioMute('+mixerId+')">-</button>';
+                        '            onclick="setAtemAudioMute(\''+mixerId+'\')">-</button>';
     }
     if(levels){
         mixerHtml +=    '    <div class="level-bar level-left">\n'+
@@ -1175,6 +1232,8 @@ function setupGui(){
         
     });
     
+    // Load preset names
+    guiPtzPresetNames();
     
     // Connect PTZ buttons
     var ptzbtn = $('button.ptz-pan-left');
@@ -1212,6 +1271,12 @@ function setupGui(){
     ptzbtn.mouseleave(function(ev) {ptzReset(null);});
     ptzbtn.mouseup(function(ev) {ptzReset(null);});
     ptzbtn.on({ 'touchstart touchmove touchend touchcancel' : absorbEvent_ });
+    
+    
+    var mixerNames = Object.keys(aMixers);
+    for (var i = 0; i < mixerNames.length; i++) {
+        guiAudioLevel(mixerNames[i]); // Update audio mixer volumes for each mixer
+    }
     
 }
 

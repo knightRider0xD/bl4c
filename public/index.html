@@ -19,11 +19,85 @@
     <h1>Welcome to the Video System</h1>
     <p>Choose from the options below to begin...</p>
     <div class="row">
+        <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="basic()">Basic Controls (Display Only)</button>
         <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="main()">Main Controls</button>
         <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="publish()">Publish</button>
         <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="window.location.href='http://localhost:5000'">View Livestream</button>
-        <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="settings()">Settings</button>
+        <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="settings()">Basic Settings</button>
         <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="window.location.href='/help.html'">Help</button>
+    </div>
+</div>
+
+<div id="basic" class="container-fluid" style="z-index: 0; display:none;">
+    <div class="row">
+        <div class="col-md-11 col-sm-11">
+            <h2>Basic Controls</h2>
+        </div>
+        <button type="button" class="col-md-1 col-sm-1 col-xs-12 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
+    </div>
+    <div class="row hidden-lg hidden-md hidden-sm col-xs-12">
+        <hr style="margin:2px;"/>
+        <p style="text-align:center; font-size:1.2em; font-weight:bold; margin: 5px; color: darkred;">NOT ALL OPTIONS ARE AVAILABLE ON MOBILE.<br /><span style="color:grey;">Switch to a device with a larger screen for full options.</span></p>
+        <hr style="margin:2px;"/>
+    </div>
+    <div class="row hidden-xs">
+        <div class="col-md-4 col-sm-4">
+            <div class="row">
+                <p style="font-size:1.2em; margin: 5px 0 0 0;">CAMERA SEL &amp; PRESETS</p>
+                <ul class="nav nav-pills nav-pills nav-justified nav-lg">
+                    <li role="presentation" class="ptz-cam-tab cam-1 active"><a href="#" onclick="guiPTZCameraSwitcher(1);return false;">CAM 1</a></li>
+                    <li role="presentation" class="ptz-cam-tab cam-2"><a href="#" onclick="guiPTZCameraSwitcher(2);return false;">CAM 2</a></li>
+                </ul>
+            </div>
+            <div class="row">
+                <button type="button" class="cam_preset cam_preset_0 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(0)">0</button>
+                <button type="button" class="cam_preset cam_preset_1 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(1)">1</button>
+                <button type="button" class="cam_preset cam_preset_2 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(2)">2</button>
+                <button type="button" class="cam_preset cam_preset_3 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(3)">3</button>
+                <button type="button" class="cam_preset cam_preset_4 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(4)">4</button>
+                <button type="button" class="cam_preset cam_preset_5 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(5)">5</button>
+            </div>
+            <div class="row">
+                <p style="font-size:1.2em; margin: 5px 0 0 0;">PROJECTOR (AUX)</p>
+                <button type="button" class="auxBtn aux-0 col-md-3 col-sm-3 col-xs-3 btn btn-lg btn-radio btn-aux" onclick="setAtemAux(0)">BLACK</button>
+                <button type="button" class="auxBtn aux-1 col-md-3 col-sm-3 col-xs-3 btn btn-lg btn-radio btn-warning" onclick="setAtemAux(1)">PC</button>
+                <button type="button" class="auxBtn aux-10010 col-md-3 col-sm-3 col-xs-3 btn btn-lg btn-radio btn-aux" onclick="setAtemAux(10010)">LIVE</button>
+                <button type="button" class="auxBtn aux-3010 col-md-3 col-sm-3 col-xs-3 btn btn-lg btn-radio btn-aux" onclick="setAtemAux(3010)">IMAGE</button>
+            </div>
+            <div class="row">
+                <p style="font-size:1.2em; margin: 5px 0 0 0;">LIVE (PROGRAM)</p>
+            </div>
+            
+        </div>
+        <div class="col-md-2 col-sm-2">
+            <div class="row">
+                <p style="font-size:1.2em; margin: 5px 0 0 0;">MIXER PRESETS</p>
+                <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="runAtemAudioPreset(0)">Muted</button>
+                <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="runAtemAudioPreset(1)">Talking</button>
+                <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="runAtemAudioPreset(2)">Band</button>
+                <button type="button" class="col-md-12 col-sm-12 col-xs-12 btn btn-lg btn-default" onclick="runAtemAudioPreset(3)">Hall</button>
+            </div>
+        </div>
+        <div id="mixerB1"     class="amixer chnl-select chnl-default-1201              col-md-2 col-sm-2"></div>
+        <div id="mixerB2"     class="amixer chnl-select chnl-default-1001              col-md-2 col-sm-2"></div>
+        <div id="mixerBMSTR"  class="amixer chnl-fixed  chnl-default-0    mixer-nomute col-md-2 col-sm-2"></div>
+        
+    </div>
+    <div class="row">
+        <div class="col-md-12 col-sm-12 col-xs-12" style="padding:0">
+            <button type="button" class="progBtn prog-0 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(0)">BLACK</button>
+            <button type="button" class="progBtn prog-1 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-danger" onclick="setAtemProgram(1)">PC</button>
+            <button type="button" class="progBtn prog-2 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(2)">VREC</button>
+            <button type="button" class="progBtn prog-3 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(3)">DESK</button>
+            <button type="button" class="progBtn prog-4 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(4)">HDMI4</button>
+            <button type="button" class="progBtn prog-5 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(5)">PTZ1</button>
+            <button type="button" class="progBtn prog-6 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(6)">PTZ2</button>
+            <button type="button" class="progBtn prog-7 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(7)">CONV</button>
+            <button type="button" class="progBtn prog-8 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(8)">SDI8</button>
+            <button type="button" class="progBtn prog-2001 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(2001)">WHITE</button>
+            <button type="button" class="progBtn prog-3010 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(3010)">IMAGE</button>
+            <button type="button" class="progBtn prog-5010 col-md-1 col-sm-1 col-xs-4 btn btn-lg btn-radio btn-prog" onclick="setAtemProgram(5010)">KEYER</button>
+        </div>
     </div>
 </div>
 
@@ -33,6 +107,11 @@
             <h2>Video System Control</h2>
         </div>
         <button type="button" class="col-xs-12 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
+    </div>
+    <div class="row hidden-lg hidden-md hidden-sm col-xs-12">
+        <hr style="margin:2px;"/>
+        <p style="text-align:center; font-size:1.2em; font-weight:bold; margin: 5px; color: darkred;">NOT ALL OPTIONS ARE AVAILABLE ON MOBILE.<br /><span style="color:grey;">Switch to a device with a larger screen for full options.</span></p>
+        <hr style="margin:2px;"/>
     </div>
     <div class="row">
         <div class="col-md-3 col-sm-3">
@@ -44,12 +123,12 @@
                 </ul>
             </div>
             <div class="row">
-                <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(0)">Lectern</button>
-                <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(1)">Center</button>
-                <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(2)">W.Lead</button>
-                <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(3)">Table</button>
-                <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(4)">Wide</button>
-                <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(5)">Band</button>
+                <button type="button" class="cam_preset cam_preset_0 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(0)">0</button>
+                <button type="button" class="cam_preset cam_preset_1 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(1)">1</button>
+                <button type="button" class="cam_preset cam_preset_2 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(2)">2</button>
+                <button type="button" class="cam_preset cam_preset_3 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(3)">3</button>
+                <button type="button" class="cam_preset cam_preset_4 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(4)">4</button>
+                <button type="button" class="cam_preset cam_preset_5 col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="ptzRecallPreset(5)">5</button>
             </div>
             <hr style="margin:2px;"/>
             <div class="row">
@@ -57,7 +136,7 @@
                 <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(0)">Muted</button>
                 <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(1)">Talking</button>
                 <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(2)">Band</button>
-                <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(3)">Mics</button>
+                <button type="button" class="col-md-6 col-sm-6 col-xs-6 btn btn-lg btn-default" onclick="runAtemAudioPreset(3)">Hall</button>
             </div>
             <hr style="margin:2px;"/>
             <div class="row">
@@ -86,7 +165,7 @@
                     <ul class="nav nav-pills nav-pills">
                         <li role="presentation" class="transStyle trans-none"><a href="#" onclick="guiAutoTransSwitcher('none');return false;">DISABLED</a></li>
                         <li role="presentation" class="transStyle trans-cut"><a href="#" onclick="guiAutoTransSwitcher('cut');return false;">&nbsp;CUT&nbsp;</a></li>
-                        <li role="presentation" class="transStyle trans-mix active" style="height:20px;"><a href="#" onclick="guiAutoTransSwitcher('mix');return false;">&nbsp;FADE&nbsp;&nbsp;&nbsp;&nbsp;<input type="number" id="transLength" name="transLength" min="0" max="10000" step="100" value="600" style="width:80px; color:#000;" onchange="setAtemTransLength()"/>millis</a>&nbsp;</li>
+                        <li role="presentation" class="transStyle trans-mix active" style="height:20px;"><a href="#" onclick="guiAutoTransSwitcher('mix');return false;">&nbsp;FADE&nbsp;</a></li>
                     </ul>
                 </div></div>
                 <hr style="margin: 8px 2px 2px 2px;">
@@ -126,11 +205,11 @@
             
             <!-- Audio Mixers -->
             <div class="row index-page page-amixers" style="display:none;">
-                <div id="mixer1"    class="amixer chnl-select chnl-default-4                 col-md-2 col-sm-2 grid-5"></div>
-                <div id="mixer2"    class="amixer chnl-select chnl-default-8                 col-md-2 col-sm-2 grid-5"></div>
-                <div id="mixer3"    class="amixer chnl-select chnl-default-1201              col-md-2 col-sm-2 grid-5"></div>
-                <div id="mixer4"    class="amixer chnl-select chnl-default-1001              col-md-2 col-sm-2 grid-5"></div>
-                <div id="mixerMSTR" class="amixer chnl-fixed  chnl-default-0    mixer-nomute col-md-2 col-sm-2 grid-5"></div>
+                <div id="mixerM1"    class="amixer chnl-select chnl-default-4               col-md-2 col-sm-2 grid-5"></div>
+                <div id="mixerM2"    class="amixer chnl-select chnl-default-8               col-md-2 col-sm-2 grid-5"></div>
+                <div id="mixerM3"    class="amixer chnl-select chnl-default-1201            col-md-2 col-sm-2 grid-5"></div>
+                <div id="mixerM4"    class="amixer chnl-select chnl-default-1001            col-md-2 col-sm-2 grid-5"></div>
+                <div id="mixerMMSTR" class="amixer chnl-fixed  chnl-default-0  mixer-nomute col-md-2 col-sm-2 grid-5"></div>
             </div>
             
             <!-- PTZ Controls -->
@@ -236,7 +315,10 @@
                     
                     <row id="callSkypeConfig" class="media-config" style="display: none;">
                         <p style="font-size:1.2em; margin: 5px 0 0 0;">SKYPE</p>
-                        <p style="font-size:1.2em; margin: 5px 0 0 0;">xxxxx</p>
+                        <p>Automation feature not implemented. Use manual controls to login/call.</p>
+                    </row>
+                    
+                    <row id="callStatus" class="media-config" style="display: none;">
                     </row>
                     
                 </div>
@@ -295,8 +377,12 @@
         <div class="col-md-11 col-sm-11">
             <h2>Publish Recordings</h2>
         </div>
-            <button type="button" id="recordBtn" class="col-md-1 col-sm-1 col-xs-12 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
+            <button type="button" class="col-md-1 col-sm-1 col-xs-12 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
         
+    </div>
+    <div class="row hidden-lg hidden-md hidden-sm col-xs-12">
+        <hr style="margin:4px;"/>
+        <p style="text-align:center; font-size:1.2em; font-weight:bold; margin: 5px; color: darkred;">NOT ALL OPTIONS ARE AVAILABLE ON MOBILE.<br /><span style="color:grey;">Switch to a device with a larger screen for full options.</span></p>
     </div>
     <hr style="margin:4px;" />
     <div class="row" id="pubControl" >
@@ -516,11 +602,98 @@
 <div id="settings" class="container-fluid" style="z-index: 0; display:none;">
     <div class="row">
         <div class="col-md-11 col-sm-11 col-xs-12">
-            <h2>System Settings</h2>
+            <h2>Settings</h2>
         </div>
-        <button type="button" id="recordBtn" class="col-md-1 col-sm-1 col-xs-12 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
-        
+        <button type="button" class="col-md-1 col-sm-1 col-xs-12 btn btn-lg btn-default" onclick="menu()"><span class="glyphicon glyphicon glyphicon-menu-hamburger" aria-hidden="true"></span></button>
     </div>
+    <div class="row hidden-lg hidden-md hidden-sm col-xs-12">
+        <hr style="margin:2px;"/>
+        <p style="text-align:center; font-size:1.2em; font-weight:bold; margin: 5px; color: darkred;">NOT ALL SETTINGS ARE AVAILABLE ON MOBILE.<br /><span style="color:grey;">Switch to a device with a larger screen for full settings.</span></p>
+        <hr style="margin:2px;"/>
+    </div>
+    <div class="row hidden-xs">
+        <hr style="margin:2px;"/>
+        <p style="font-size:1.2em; margin: 5px 0 0 0;">PRORGRAM FADE TRANSITION LENGTH<br /><span style="color:grey;">Resets on ATEM Reboot. Save ATEM state to make persistent.</span></p>
+        <input type="number" id="transLength" name="transLength" min="0" max="10000" step="100" value="600" style="color:#000; height:32px;" class="col-md-6 col-sm-6 col-xs-5" /> 
+        <span class="col-md-4 col-sm-4 col-xs-3">&nbsp;milliseconds</span>
+        <button class="col-md-2 col-sm-2 col-xs-4 btn btn-default" onclick="setAtemTransLength()">SET</button>
+    </div>
+    <div class="row">
+        <hr style="margin:2px;"/>
+        <p style="font-size:1.2em; margin: 5px 0 0 0;">CAMERA PRESETS<br /><span style="color:grey;">Sets display name and position of camera presets. Is persistent.</span></p>
+        <p style="font-size:1.2em; margin: 5px 0 0 0;" class="col-md-12 col-sm-12 col-xs-12">Camera 1</p>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_1_preset_0 col-md-12 col-sm-12 col-xs-12" value="0" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(1,0)">SET</button>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_1_preset_1 col-md-12 col-sm-12 col-xs-12" value="1" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(1,1)">SET</button>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_1_preset_2 col-md-12 col-sm-12 col-xs-12" value="2" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(1,2)">SET</button>
+        </div>
+        <p class="hidden-lg hidden-md hidden-sm col-xs-12">&nbsp;</p>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_1_preset_3 col-md-12 col-sm-12 col-xs-12" value="3" maxlength="8" style="color:#000; height:32px;" />
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(1,3)">SET</button>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_1_preset_4 col-md-12 col-sm-12 col-xs-12" value="4" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(1,4)">SET</button>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_1_preset_5 col-md-12 col-sm-12 col-xs-12" value="5" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(1,5)">SET</button>
+        </div>
+        <p style="font-size:1.2em; margin: 5px 0 0 0;" class="col-md-12 col-sm-12 col-xs-12"><br />Camera 2</p>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_2_preset_0 col-md-12 col-sm-12 col-xs-12" value="0" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(2,0)">SET</button>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_2_preset_1 col-md-12 col-sm-12 col-xs-12" value="1" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(2,1)">SET</button>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_2_preset_2 col-md-12 col-sm-12 col-xs-12" value="2" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(2,2)">SET</button>
+        </div>
+        <p class="hidden-lg hidden-md hidden-sm col-xs-12">&nbsp;</p>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_2_preset_3 col-md-12 col-sm-12 col-xs-12" value="3" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(2,3)">SET</button>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_2_preset_4 col-md-12 col-sm-12 col-xs-12" value="4" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(2,4)">SET</button>
+        </div>
+        <div class="col-md-2 col-sm-2 col-xs-4">
+            <input type="text" class="cam_preset_name cam_2_preset_5 col-md-12 col-sm-12 col-xs-12" value="5" maxlength="8" style="color:#000; height:32px;" /> 
+            <button class="col-md-12 col-sm-12 col-xs-12 btn btn-default" onclick="ptzSetPreset(2,5)">SET</button>
+        </div>
+    </div>
+    <div class="row hidden-xs">
+        <hr style="margin:2px;"/>
+        <p style="font-size:1.2em; margin: 5px 0 0 0;">RELOAD SYSTEM COMPONENTS<br /><span style="color:grey;">Reloads individual components without requiring reboot.</span></p>
+        <p class="col-md-3 col-sm-3 col-xs-8">ATEM</p>
+        <button class="col-md-2 col-sm-2 col-xs-4 btn btn-danger" onclick="reloadPlugin('atem')">RELOAD</button>
+        <p class="col-md-2 col-sm-2 hidden-xs">&nbsp;</p>
+        <p class="col-md-3 col-sm-3 col-xs-8">Media Player</p>
+        <button class="col-md-2 col-sm-2 col-xs-4 btn btn-danger" onclick="reloadPlugin('mediaplayer')">RELOAD</button>
+        <p class="col-md-3 col-sm-3 col-xs-8">Publisher</p>
+        <button class="col-md-2 col-sm-2 col-xs-4 btn btn-danger" onclick="reloadPlugin('publisher')">RELOAD</button>
+        <p class="col-md-2 col-sm-2 hidden-xs">&nbsp;</p>
+        <p class="col-md-3 col-sm-3 col-xs-8">Recorder</p>
+        <button class="col-md-2 col-sm-2 col-xs-4 btn btn-danger" onclick="reloadPlugin('recorder')">RELOAD</button>
+        <p class="col-md-3 col-sm-3 col-xs-8">Video Chat</p>
+        <button class="col-md-2 col-sm-2 col-xs-4 btn btn-danger" onclick="reloadPlugin('videocaller')">RELOAD</button>
+        <p class="col-md-2 col-sm-2 hidden-xs">&nbsp;</p>
+        <p class="col-md-3 col-sm-3 col-xs-8">PTZ Camera Control</p>
+        <button class="col-md-2 col-sm-2 col-xs-4 btn btn-danger" onclick="reloadPlugin('visca')">RELOAD</button>
+    </div>
+    <p>&nbsp;</p>
 </div>
 
 </body>

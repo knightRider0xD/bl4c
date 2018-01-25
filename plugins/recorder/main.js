@@ -1,5 +1,4 @@
 var recorderStatus = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
-var publisherStatus = {publishing:0};
 var recorder = 0;
 
 var spawn  = require('child_process').spawn;
@@ -28,6 +27,8 @@ exports.load = function (main_sys) {
        system.registerSioEvent(sio_hooks[i].event, sio_hooks[i].callback); 
     }
     
+    exiting = 0;
+    
     connectToRecorder();
     reloadRecordings();
     getRemainingRecordingSpace();
@@ -35,14 +36,12 @@ exports.load = function (main_sys) {
 }
 
 exports.unload = function () {
+    exiting = 1;
     quitRecorder();
 }
 
 exports.notify = function (signalName, value) {
-    //Update status if publishing
-    if(signalName == "publisher_status"){
-        publisherStatus = value;
-    }
+    //
 }
 
 // Socket.IO Callbacks
@@ -97,6 +96,7 @@ function connectToRecorder(){
         recorder.kill('SIGKILL');
         recorder = 0;
         recorderStatus.recording = 0;
+        system.releaseResource('hdd');
         getRemainingRecordingSpace();
         system.sendNotice('update', recorderStatus);
         system.doSioEmit('update', recorderStatus);
@@ -133,9 +133,9 @@ function startRecording(){
         return;
     }
     
-    if(publisherStatus.publishing != 0){
-        console.log('Publishing; cannot record.');
+    if(!system.acquireResource('hdd')){
         system.doSioEmit('update', recorderStatus);
+        console.log('Cannot record while disk in use.');
         return;
     }
     
@@ -163,6 +163,8 @@ function stopRecording(){
         recorder.stdin.write('clear\n'); // send 'clear'
     }
     
+    system.releaseResource('hdd');
+    
     setTimeout(function(){
         getRecorderStatus();
     }, 100);
@@ -171,7 +173,6 @@ function stopRecording(){
 function quitRecorder(){
     if(recorder){
         stopRecording();
-        exiting = 1;
         recorder.kill('SIGTERM');
         exiting = 0;
     }

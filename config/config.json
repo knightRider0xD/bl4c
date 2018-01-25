@@ -2,10 +2,16 @@
   "global": {
     "ip": "192.168.10.232",
     "http_port": 8080,
-    "live_stream": 5000
-  },
-  "http": {
-    "port": 5100
+    "live_stream": 5000,
+    "resolution": {
+      "width": 1366,
+      "height": 768
+    },
+    "resources": [
+      "hdd",
+      "odd",
+      "display"
+    ]
   },
   "atem": {
     "ip": "192.168.10.240",
@@ -13,6 +19,7 @@
     "alvl_frequency": 4,
     "alvl_presets": [
       {
+        "presetName": "Muted",
         "audioChannels": {
           "1": [
             0,
@@ -57,6 +64,7 @@
         }
       },
       {
+        "presetName": "Talking",
         "audioChannels": {
           "1": [
             0,
@@ -101,6 +109,7 @@
         }
       },
       {
+        "presetName": "Band",
         "audioChannels": {
           "1": [
             0,
@@ -145,6 +154,7 @@
         }
       },
       {
+        "presetName": "Mics",
         "audioChannels": {
           "1": [
             0,
@@ -195,10 +205,10 @@
   },
   "recorder": {
     "port": 4990,
-    "__out_dir": "/home/user/recordings/",
     "out_dir": "/home/ian/Videos/",
     "v_bitrate": 12000,
-    "a_bitrate": 128
+    "a_bitrate": 128,
+    "__out_dir": "/home/user/recordings/"
   },
   "mediaplayer": {
     "port": 4991
@@ -216,7 +226,25 @@
     "__files_dir": "/home/user/recordings/"
   },
   "visca": {
-    "serial": "/dev/ttyUSB0"
+    "serial": "/dev/ttyUSB0",
+    "presets": [
+      [
+        "Lectern",
+        "Center",
+        "W.Lead",
+        "Table",
+        "Wide",
+        "Band"
+      ],
+      [
+        "Lectern",
+        "Center",
+        "W.Lead",
+        "Table",
+        "Wide",
+        "Band"
+      ]
+    ]
   },
   "test": {
     "test": "default"

@@ -17,12 +17,9 @@ config.defaults({
     "global": {
         "ip": "192.168.10.232",
         "http_port": 8080,
-        "live_stream": 5000
-    },
-    "resources": {
-        'hdd':1,
-        'odd':1,
-        'display':1
+        "live_stream": 5000,
+        "resolution": {"width":1024,"height":768},
+        "resources": ["hdd","odd","display"]
     },
     "http": {
         "port": 8080
@@ -35,14 +32,18 @@ config.defaults({
 //
 var plugins = {};
 
-//
-var resources = config.get('resources');
+var exiting = 0;
 
 // global vars
-var exiting = 0;
 var global_config = config.get('global');
 config.set('global', global_config);
 config.save();
+
+// shared resources
+var resources = {};
+for(var i=0; i<global_config.resources.length; i++){
+    resources[global_config.resources[i]] = "";
+}
 
 // HTTP & SIO Vars
 var app         = 0;
@@ -53,8 +54,9 @@ var sioEvents   = [];
 var sioConnects = [];
 
 
-function PluginConnector(name) {
+function PluginConnector(name,dir) {
     this.pluginName = name;
+    this.pluginDir = dir;
 }
 
 PluginConnector.prototype.sendNotice = function(signalName, value) {
@@ -83,7 +85,7 @@ PluginConnector.prototype.registerSioEvent = function(eventName, callback) {
         var pluginName = this.pluginName;
         var callback_shell = function(){
             try {
-                console.log("Socket.IO received "+pluginName+'_'+eventName+": "+arguments);
+                console.log("Socket.IO received "+pluginName+'_'+eventName+": "+JSON.stringify(arguments));
                 callback.apply(this, arguments);
             } catch (err) {
                 console.log("Error while running Socket.IO event "+pluginName+'_'+eventName+": "+err);
@@ -93,6 +95,7 @@ PluginConnector.prototype.registerSioEvent = function(eventName, callback) {
         sioEvents.push({'name':this.pluginName+'_'+eventName, 'callback':callback_shell});
         //socket.disconnect('Resetting connection to register new server plugin.');
     }
+    console.log("Socket.IO registered "+this.pluginName+'_'+eventName);
 }
 
 PluginConnector.prototype.doSioEmit = function(signalName, value) {
@@ -168,10 +171,15 @@ PluginConnector.prototype.releaseResource = function(resourceName) {
 
 function loadPlugins(){
     
-    var blacklist = '';
+    var blacklist = [];
     
     if (fs.existsSync('./plugins/blacklist.txt')) {
-        blacklist = fs.readFileSync('./plugins/blacklist.txt', 'utf8').split('\n');
+        var tmpBlist = fs.readFileSync('./plugins/blacklist.txt', 'utf8').split('\n');
+        for(var i=0; i<tmpBlist.length; i++){
+            if(!tmpBlist[i].startsWith('#')){
+                blacklist.push(tmpBlist[i]);
+            }
+        }
     }
     
     console.log("The following modules are blacklisted: "+blacklist.toString());
@@ -183,8 +191,22 @@ function loadPlugins(){
                 continue;
             }
             //plugin folder
-            plugins[out[i]] = require('./plugins/'+out[i]+'/main');
-            plugins[out[i]].load(new PluginConnector(String(out[i])));
+            var pluginName = String(out[i]);
+            plugins[pluginName] = require('./plugins/'+out[i]+'/main');
+            var pConnector = new PluginConnector(pluginName,String(process.cwd()+'/plugins/'+out[i]));
+            plugins[pluginName].load(pConnector);
+            
+            //Reload event
+            var reload_fn = function(){
+                try {
+                    console.log("Reload "+pluginName);
+                    plugins[pluginName].unload();
+                    setTimeout(function(){plugins[pluginName].load(pConnector);}, 4000);
+                } catch (err) {
+                    console.log("Error while reloading "+pluginName+": "+err);
+                }
+            };
+            sioEvents.push({'name':pluginName+'_reload', 'callback':reload_fn});
         }
         
     }

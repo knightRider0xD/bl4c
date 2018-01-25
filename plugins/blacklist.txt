@@ -1,7 +1,7 @@
 #atem
 mediaplayer
-publisher
+#publisher
 recorder
-videocaller
+#videocaller
 #visca
 #test

@@ -5,7 +5,6 @@ var publisherFiles  = [];
 var currentTcIndex  = 0;
 var transcodedFiles = [];
 var destFile        = '';
-var recorderStatus  = {connected:0,recording:0,remainingSpace:'Remaining&nbsp;Space&nbsp;Unavailable'};
 var spawn           = require('child_process').spawn;
 var fs              = require('fs');
 var system          = null;
@@ -58,10 +57,7 @@ exports.unload = function () {
 }
 
 exports.notify = function (signalName, value) {
-    //Update status if publishing
-    if(signalName == "recorder_status"){
-        recorderStatus = value;
-    }
+    //
 }
 
 sio_hooks.push({event:'getFileList', callback:function(){
@@ -775,7 +771,8 @@ function syncAndClear(path, callback){
 function finished(reset) {
     publisherStatus.status = 0;
     publisherStatus.complete = 0;
-    system.sendNotice('status', {publishing:0});
+    system.releaseResource('hdd');
+    system.releaseResource('odd');
     if(reset){
         setTimeout(function(){
             system.doSioEmit('update', publisherStatus);
@@ -811,12 +808,17 @@ function publishDisc(sourceFNames, menuFName, resume){
         return;
     }
     
-    if(recorderStatus.recording){
-        console.log('Recording; cannot publish.');
+    if(!system.acquireResource('hdd')){
+        system.doSioEmit('update', publisherStatus);
+        console.log('Cannot publish while disk in use.');
         return;
     }
     
-    system.sendNotice('status', {publishing:1});
+    if(!system.acquireResource('odd')){
+        system.doSioEmit('update', publisherStatus);
+        console.log('Cannot publish while optical drive in use.');
+        return;
+    }
     
     if (!resume) {
         publisherStatus.lastDiscStatus = 0;
@@ -934,12 +936,11 @@ function publishUpload(sourceFNames, destFName, transcode, protocol, server, use
         return;
     }
     
-    if(recorderStatus.recording){
-        console.log('Recording; cannot publish.');
+    if(!system.acquireResource('hdd')){
+        system.doSioEmit('update', publisherStatus);
+        console.log('Cannot publish while disk in use.');
         return;
     }
-    
-    system.sendNotice('status', {publishing:1});
     
     if (!resume) {
         publisherStatus.lastFileStatus = 0;
@@ -1066,8 +1067,6 @@ function publishRemovableDrive(sourceFNames, destFName, transcode, drivePath, re
         console.log('Recording; cannot publish.');
         return;
     }
-    
-    system.sendNotice('status', {publishing:1});
     
     if (!resume) {
         publisherStatus.lastFileStatus = 0;

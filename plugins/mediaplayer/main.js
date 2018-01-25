@@ -1,6 +1,7 @@
 var mediaplayerStatus = {connected:0,playing:0};
 var mediaplayer = 0;
 var mediaplayerWait = 0;
+var exiting = 0;
 
 var spawn  = require('child_process').spawn;
 var system = null;
@@ -94,6 +95,7 @@ function connectToMediaPlayer(){
         mediaplayer.kill('SIGKILL');
         mediaplayer = 0;
         mediaplayerStatus.connected = 0;
+        system.releaseResource('display');
         system.doSioEmit('update', mediaplayerStatus);
         if(exiting){
             return;
@@ -118,6 +120,22 @@ function playMediaPlayer(mrl){
         system.doSioEmit('update', mediaplayerStatus);
         console.log('mediaplayer Offline');
         return;
+    }
+    
+    if(!system.acquireResource('display')){
+        system.doSioEmit('update', mediaplayerStatus);
+        console.log('cannot acquire display');
+        return;
+    }
+    
+    //Acquire locks for ODD if playing from optical drive
+    if(mrl.startsWith("dvd") || mrl.startsWith("cd") || mrl.startsWith("bluray")){
+        if(!system.acquireResource('odd')){
+            system.doSioEmit('update', mediaplayerStatus);
+            console.log('cannot acquire optical drive');
+            system.releaseResource('display');
+            return;
+        }
     }
     
     mediaplayer.stdin.write('stop\n'); // send 'stop'
@@ -149,6 +167,9 @@ function stopMediaPlayer(){
         mediaplayer.stdin.write('stop\n'); // send 'stop'
         mediaplayer.stdin.write('clear\n'); // send 'clear'
     }
+    
+    system.releaseResource('display');
+    system.releaseResource('odd');
     
     setTimeout(function(){
         getMediaPlayerStatus();

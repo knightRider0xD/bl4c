@@ -15,13 +15,17 @@ var config = {
         "ip": "192.168.10.240",
         "fps": 50,
         "alvl_frequency": 4,
-        "alvl_presets": [   {"audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
+        "alvl_presets": [   {"presetName":     "Muted",
+                             "audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
                                                 "7":[0,0],"8":[0,0], "1001":[0,0], "1201":[0,0]}},
-                            {"audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
+                            {"presetName":     "Talking",
+                             "audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
                                                 "7":[0,0],"8":[0,0], "1001":[0,0], "1201":[1,-5]}},
-                            {"audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
+                            {"presetName":     "Band",
+                             "audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
                                                 "7":[0,0],"8":[0,0], "1001":[0,0], "1201":[1,-10]}},
-                            {"audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
+                            {"presetName":     "Mics",
+                             "audioChannels":  {"1":[0,0],"2":[0,0],"3":[0,0],"4":[0,0],"5":[0,0],"6":[0,0],
                                                 "7":[0,0],"8":[0,0], "1001":[1,-10], "1201":[1,-10]}}    ]
 };
 
@@ -40,11 +44,13 @@ exports.load = function (main_sys) {
        system.registerSioEvent(sio_hooks[i].event, sio_hooks[i].callback); 
     }
     
+    exiting = 0;
     connectToAtem();
     
 }
 
 exports.unload = function () {
+    exiting = 1;
     stopAtemConnection();
 }
 
@@ -55,12 +61,12 @@ exports.notify = function (signalName, value) {
 // Socket.IO Callbacks
 
 sio_hooks.push({event:'changeProgram', callback:function(change){
-
+    console.log(JSON.stringify(atemStatus.dsk));
     if (parseInt(change.input/1000) == 5){
         //Set Keyers
         var targetKeyer = (parseInt((change.input-5000) / 10)-1);
         for(var i=0; i<atemStatus.dsk.length; i++){
-            if((atemStatus.dsk[i].live == true && i != targetKeyer)||(atemStatus.dsk[i].live == false && i == targetKeyer)){
+            if((atemStatus.dsk[i].live && i != targetKeyer)||(!atemStatus.dsk[i].live && i == targetKeyer)){
                 sendAtemInput('SET DSKTIE '+i+' '+1);
             } else {
                 sendAtemInput('SET DSKTIE '+i+' '+0);
@@ -77,11 +83,11 @@ sio_hooks.push({event:'changeProgram', callback:function(change){
             sendAtemInput('SET PREV '+currPrev);
         }
     } else {
-        //Clear Keyers
+        //Reset keyers
         for(var i=0; i<atemStatus.dsk.length; i++){
-            if(atemStatus.dsk[i].live && !atemStatus.dsk[i].tie){
+            if(atemStatus.dsk[i].live){
                 sendAtemInput('SET DSKTIE '+i+' '+1);
-            } else if(!atemStatus.dsk[i].live && atemStatus.dsk[i].tie){
+            } else {
                 sendAtemInput('SET DSKTIE '+i+' '+0);
             }
         }
@@ -93,6 +99,7 @@ sio_hooks.push({event:'changeProgram', callback:function(change){
             sendAtemInput('SET PREV '+change.input);
             sendAtemInput('DO TRANS');
         } else {
+            sendAtemInput('SET DSKEY '+i+' '+0);
             sendAtemInput('SET PROG '+change.input);
         }
     }
@@ -100,9 +107,10 @@ sio_hooks.push({event:'changeProgram', callback:function(change){
 }});
 
 sio_hooks.push({event:'setPreview', callback:function(input){
-    if (parseInt(change.input / 1000) == 5){
+    console.log(JSON.stringify(atemStatus.dsk));
+    if (parseInt(input / 1000) == 5){
         //Set Keyers
-        var targetKeyer = (parseInt((change.input-5000) / 10)-1);
+        var targetKeyer = (parseInt((input-5000) / 10)-1);
         for(var i=0; i<atemStatus.dsk.length; i++){
             if((atemStatus.dsk[i].live == true && i != targetKeyer)||(atemStatus.dsk[i].live == false && i == targetKeyer)){
                 sendAtemInput('SET DSKTIE '+i+' '+1);
@@ -119,7 +127,7 @@ sio_hooks.push({event:'setPreview', callback:function(input){
                 sendAtemInput('SET DSKTIE '+i+' '+0);
             }
         }
-        sendAtemInput('SET PREV '+change.input);
+        sendAtemInput('SET PREV '+input);
     }
 }});
 
@@ -244,13 +252,18 @@ function parseAtemOutput(line){
     case "DSKEY:":
         keyer = parseInt(cmd[2]);
         if (isNaN(keyer)) { break; }
-        atemStatus.dsk[keyer].live = (cmd[4] == 'true');
+        atemStatus.dsk[keyer].live = (cmd[4] == '1');
+        if(atemStatus.dsk[keyer].live){
+            sendAtemInput('SET DSKTIE '+keyer+' '+1);
+        } else {
+            sendAtemInput('SET DSKTIE '+keyer+' '+0);
+        }
         system.doSioEmit('update', atemStatus);
         break;
     case "DSKTIE:":
         keyer = parseInt(cmd[2]);
         if (isNaN(keyer)) { break; }
-        atemStatus.dsk[keyer].tie = (cmd[4] == 'true');
+        atemStatus.dsk[keyer].tie = (cmd[4] == '1');
         system.doSioEmit('update', atemStatus);
         break;
     default:
@@ -323,7 +336,7 @@ function runAudioPreset(presetId){
     setTimeout(function(){
         for (const chnl in increment) {
             // Calculate new gain at this increment
-            if(current[1][0]  == 1 && target[1][0]  == 0) {
+            if(orig[chnl][0]  == 1 && target[chnl][0]  == 0) {
                 sendAtemInput('SET AINSTATE '+chnl+' 0');
                 sendAtemInput('SET AINGAIN '+chnl+' '+orig[chnl][1]);
             }
@@ -342,7 +355,7 @@ function connectToAtem(){
     if(atem){return;}
     
     
-    atem = spawn('./atem-cli', [config.ip],{cwd: process.cwd(), env: process.env, detached: true});
+    atem = spawn('./atem-cli', [config.ip],{cwd: system.pluginDir, env: process.env, detached: true});
     
     atemStatus.atem = 1;
     system.doSioEmit('update', atemStatus);
@@ -383,6 +396,9 @@ function connectToAtem(){
     setTimeout(function(){
         sendAtemInput('GET PROG');
         sendAtemInput('GET PREV');
+        sendAtemInput('GET DSKEY ALL');
+        sendAtemInput('GET DSKTIE ALL');
+        sendAtemInput('GET PREV');
         sendAtemInput('GET AUXSRC 0');
         sendAtemInput('GET ACHNLS');
         sendAtemInput('ENABLE ALVLS 1 2 3 4 5 6 7 8 1001 1201');
@@ -392,8 +408,6 @@ function connectToAtem(){
 
 function stopAtemConnection(){
     if(atem){
-        exiting = 1;
         atem.kill('SIGTERM');
-        exiting = 0;
     }
 }

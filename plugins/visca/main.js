@@ -1,13 +1,17 @@
 var visca = 0;
+var ptzLast = 0;
 var viscaLast = 0;
 var viscaNext = 0;
+var exiting = 0;
 
 var spawn  = require('child_process').spawn;
 var system = null;
 var sio_hooks = [];
 
 var config = {
-    'serial': '/dev/ttyUSB0'
+    'serial': '/dev/ttyUSB0',
+    'presets': [['Lectern','Center','W.Lead','Table','Wide','Band'],
+                ['Lectern','Center','W.Lead','Table','Wide','Band']]
 };
 
 exports.load = function (main_sys) {
@@ -17,13 +21,20 @@ exports.load = function (main_sys) {
     system.setConfigDefaults(config);
     config = system.getConfig();
     
+    system.registerSioEvent('connected', function(){
+        getPresetNames();
+    });
+    
     for(var i=0; i<sio_hooks.length; i++){
        system.registerSioEvent(sio_hooks[i].event, sio_hooks[i].callback); 
     }
     
+    exiting = 0;
+    
 }
 
 exports.unload = function () {
+    exiting = 1;
     quitVisca();
 }
 
@@ -32,46 +43,43 @@ exports.notify = function (signalName, value) {
 }
 
 // Socket.IO Callbacks
-sio_hooks.push({event:'sendPtzCmd', callback:function(ptzInfo){
-    quitVisca();
-    sendPtzCmd(ptzInfo);
+sio_hooks.push({event:'doPtzCmd', callback:function(ptzInfo){
+    doPtzCmd(ptzInfo);
 }});
         
-sio_hooks.push({event:'sendPtzRecall', callback:function(presetInfo){
-    quitVisca();
+sio_hooks.push({event:'recallPtzPreset', callback:function(presetInfo){
     setRecallViscaMemory(presetInfo.camera,0,presetInfo.slot);
 }});
 
+sio_hooks.push({event:'getPtzPresetNames', callback:function(){
+    getPresetNames();
+}});
 
-function sendPtzCmd(ptzInfo){
-    
-    if(ptzInfo){
-        viscaNext = ptzInfo;
-    }
-    
-    if(JSON.stringify(viscaLast) === JSON.stringify(viscaNext)){ //repeat command
-        return;
-    }
+sio_hooks.push({event:'savePtzPreset', callback:function(presetInfo){
+    setRecallViscaMemory(presetInfo.camera,1,presetInfo.slot);
+    setPresetName(presetInfo.camera,presetInfo.slot,presetInfo.name);
+}});
 
-    if(visca){
-        setTimeout(function(){sendPtzCmd(null);}, 128);
-        return;
-    }
-    
-    viscaLast = viscaNext;
 
-    if(viscaNext.zoom){
-        sendViscaZoom(viscaNext.camera,viscaNext.zoom)
-    } else if(viscaNext.pan || viscaNext.tilt){
-        sendViscaPanTilt(viscaNext.camera,viscaNext.pan,viscaNext.tilt);
+function doPtzCmd(ptzInfo){
+    
+    if(ptzInfo.zoom){
+        ptzLast = 'zoom';
+        doViscaZoom(ptzInfo.camera,ptzInfo.zoom)
+    } else if(ptzInfo.pan || ptzInfo.tilt){
+        ptzLast = 'pantilt';
+        doViscaPanTilt(ptzInfo.camera,ptzInfo.pan,ptzInfo.tilt);
     } else {
-        sendViscaPanTilt(viscaNext.camera,0,0);
-        sendViscaZoom(viscaNext.camera,0);
+        if (ptzLast=='zoom'){
+            doViscaZoom(ptzInfo.camera,0);
+        } else if(ptzLast=='pantilt'){
+            doViscaPanTilt(ptzInfo.camera,0,0);
+        }
     }
     
 }
 
-function sendViscaPanTilt(camera,panSpeed,tiltSpeed){
+function doViscaPanTilt(camera,panSpeed,tiltSpeed){
     
     if(exiting){return;}
     
@@ -83,27 +91,22 @@ function sendViscaPanTilt(camera,panSpeed,tiltSpeed){
     if(tiltSpeed < -20){tiltSpeed=-20;}
     
     if(panSpeed == 0 && tiltSpeed == 0){cmdName = 'set_pantilt_stop'; panSpeed=1; tiltSpeed=1;}
-    else if(panSpeed >= 0 && tiltSpeed >= 0){cmdName = 'set_pantilt_upright';}
-    else if(panSpeed < 0 && tiltSpeed >= 0){cmdName = 'set_pantilt_upleft'; panSpeed*=-1;}
-    else if(panSpeed >= 0 && tiltSpeed < 0){cmdName = 'set_pantilt_downright'; tiltSpeed*=-1;}
+    else if(panSpeed > 0 && tiltSpeed > 0){cmdName = 'set_pantilt_upright';}
+    else if(panSpeed < 0 && tiltSpeed > 0){cmdName = 'set_pantilt_upleft'; panSpeed*=-1;}
+    else if(panSpeed > 0 && tiltSpeed < 0){cmdName = 'set_pantilt_downright'; tiltSpeed*=-1;}
     else if(panSpeed < 0 && tiltSpeed < 0){cmdName = 'set_pantilt_downleft'; panSpeed*=-1; tiltSpeed*=-1;}
+    else if(panSpeed > 0 && tiltSpeed == 0){cmdName = 'set_pantilt_right'; tiltSpeed=1;}
+    else if(panSpeed < 0 && tiltSpeed == 0){cmdName = 'set_pantilt_left'; panSpeed*=-1; tiltSpeed=1;}
+    else if(panSpeed == 0 && tiltSpeed > 0){cmdName = 'set_pantilt_up'; panSpeed=1;}
+    else if(panSpeed == 0 && tiltSpeed < 0){cmdName = 'set_pantilt_down'; panSpeed=1; tiltSpeed*=-1;}
     
-    visca = spawn('./visca-cli-multi', ['-d',config.serial,'camera',camera,cmdName,panSpeed,tiltSpeed],{cwd: process.cwd(), env: process.env, detached: true});
+    console.log(system.pluginDir+' ./visca-cli-multi -d '+config.serial+' camera '+camera+' '+cmdName+' '+panSpeed+' '+tiltSpeed);
     
-    var timeout = setTimeout(function(){quitVisca();}, 120);
+    sendViscaCmd(['-d',config.serial,'camera',camera,cmdName,panSpeed,tiltSpeed]);
     
-    visca.on('error', function (err) {
-        console.log('Failed to start send visca cmd.');
-    });
-
-    visca.on('exit', function (code) {
-        clearTimeout(timeout);
-        timeout = 0;
-        visca = 0;
-    });
 }
 
-function sendViscaZoom(camera,zoomSpeed){
+function doViscaZoom(camera,zoomSpeed){
     
     if(exiting){return;}
     
@@ -116,73 +119,42 @@ function sendViscaZoom(camera,zoomSpeed){
     else if(zoomSpeed <= -2){cmdName = 'set_zoom_wide_speed'; zoomSpeed*=-1;}
     else {cmdName = 'set_zoom_stop';}
     
-    visca = spawn('./visca-cli-multi', ['-d',config.serial,'camera',camera,cmdName,zoomSpeed],{cwd: process.cwd(), env: process.env, detached: true});
-    
-    var timeout = setTimeout(function(){quitVisca();}, 120);
-    
-    visca.on('error', function (err) {
-        console.log('Failed to start send visca cmd.');
-    });
-
-    visca.on('exit', function (code) {
-        clearTimeout(timeout);
-        visca = 0;
-    });
+    sendViscaCmd(['-d',config.serial,'camera',camera,cmdName,zoomSpeed]);
 }
 
 function setRecallViscaMemory(camera,set,slot){
     
-   if(exiting || visca){return;}
+   if(exiting){return;}
    if(slot > 5 || slot < 0){return;}
    
     if(set){
-            sendViscaSetMemory(camera,slot);
+            doViscaSetMemory(camera,slot);
     } else {
-            sendViscaRecallMemory(camera,slot);
+            doViscaRecallMemory(camera,slot);
     }
 }
 
-function sendViscaRecallMemory(camera,slot){
+function doViscaRecallMemory(camera,slot){
     
-    if(exiting || visca){return;}
+    if(exiting){return;}
     if(slot > 5 || slot < 0){return;}
     
-    visca = spawn('./visca-cli-multi', ['-d',config.serial,'camera',camera,'memory_recall',''+slot+''],{cwd: process.cwd(), env: process.env, detached: false});
+    sendViscaCmd(['-d',config.serial,'camera',camera,'memory_recall',''+slot+'']);
     
-    var timeout = setTimeout(function(){quitVisca();}, 120);
-    
-    visca.on('error', function (err) {
-        console.log('Failed to start send visca cmd.');
-    });
-
-    visca.on('exit', function (code) {
-        clearTimeout(timeout);
-        visca = 0;
-    });
 }
 
-function sendViscaSetMemory(camera,slot){
+function doViscaSetMemory(camera,slot){
     
-    if(exiting || visca){return;}
+    if(exiting){return;}
     if(slot > 5 || slot < 0){return;}
 
-    visca = spawn('./visca-cli-multi', ['-d',config.serial,'camera',camera,'memory_set',slot],{cwd: process.cwd(), env: process.env, detached: true});
+    sendViscaCmd(['-d',config.serial,'camera',camera,'memory_set',slot]);
     
-    var timeout = setTimeout(function(){quitVisca();}, 120);
-    
-    visca.on('error', function (err) {
-        console.log('Failed to start send visca cmd.');
-    });
-
-    visca.on('exit', function (code) {
-        clearTimeout(timeout);
-        visca = 0;
-    });
 }
 
-function sendViscaPanTiltPos(camera,panSpeed,tiltSpeed,panPos,tiltPos){
+function doViscaPanTiltPos(camera,panSpeed,tiltSpeed,panPos,tiltPos){
     
-    if(exiting || visca){return;}
+    if(exiting){return;}
     
     if(panSpeed > 24){panSpeed=24;}
     if(panSpeed < 1){panSpeed=1;}
@@ -193,30 +165,37 @@ function sendViscaPanTiltPos(camera,panSpeed,tiltSpeed,panPos,tiltPos){
     if(tiltPos > 300){tiltPos=300;}
     if(tiltPos < -299){tiltPos=-299;}
     
-    visca = spawn('./visca-cli-multi', ['-d',config.serial,'camera',camera,'set_pantilt_absolute_position',panSpeed,tiltSpeed,panPos,tiltPos],{cwd: process.cwd(), env: process.env, detached: true});
-    
-    var timeout = setTimeout(function(){quitVisca();}, 120);
-    
-    visca.on('error', function (err) {
-        console.log('Failed to start send visca cmd.');
-    });
+    sendViscaCmd(['-d',config.serial,'camera',camera,'set_pantilt_absolute_position',panSpeed,tiltSpeed,panPos,tiltPos]);
 
-    visca.on('exit', function (code) {
-        clearTimeout(timeout);
-        visca = 0;
-    });
 }
 
-function sendViscaZoomLvl(camera,zoomValue){
+function doViscaZoomLvl(camera,zoomValue){
     
-    if(exiting || visca){return;}
+    if(exiting){return;}
     
     if(zoomValue > 1023){zoomValue=1023;}
     if(zoomValue < 0){zoomValue=0;}
     
-    visca = spawn('./visca-cli-multi', ['-d',config.serial,'camera',camera,'set_zoom_value',zoomValue],{cwd: process.cwd(), env: process.env, detached: true});
+    sendViscaCmd(['-d',config.serial,'camera',camera,'set_zoom_value',zoomValue]);
+}
+
+function sendViscaCmd(commandArgs){
     
-    var timeout = setTimeout(function(){quitVisca();}, 120);
+    if(commandArgs){
+        viscaNext = commandArgs;
+    }
+    
+    if(visca){// || JSON.stringify(viscaLast) === JSON.stringify(viscaNext)){ // busy or repeat command
+        return;
+    }
+    
+    visca = spawn('./visca-cli-multi', viscaNext,{cwd: system.pluginDir, env: process.env, detached: true});
+    
+    var timeout = setTimeout(function(){quitVisca();}, 2000);
+    
+    //Log command
+    viscaLast = viscaNext;
+    viscaNext = 0;
     
     visca.on('error', function (err) {
         console.log('Failed to start send visca cmd.');
@@ -225,11 +204,26 @@ function sendViscaZoomLvl(camera,zoomValue){
     visca.on('exit', function (code) {
         clearTimeout(timeout);
         visca = 0;
+        if(viscaNext){
+            sendViscaCmd(null);
+        }
     });
+    
 }
+
 
 function quitVisca(){
     if(visca){
         visca.kill('SIGTERM');
     }
+}
+
+function getPresetNames(){
+    system.doSioEmit('presets', config.presets);
+}
+
+function setPresetName(camera,slot,name){
+    config.presets[camera-1][slot] = name;
+    system.setConfig('presets', config.presets);
+    system.doSioEmit('presets', config.presets);
 }
